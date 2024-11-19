@@ -30,9 +30,20 @@ def main():
     parser.add_argument(
         '-p', '--plots',
         nargs='+',
-        choices=['line', 'bar', 'heatmap', 'all'],
+        choices=[
+            'memory_usage_over_time',
+            'allocation_deallocation_rates',
+            'allocation_latency_over_time',
+            'allocation_size_distribution',
+            'memory_usage_by_source',
+            'number_of_allocations_by_source',
+            'average_allocation_latency_by_source',
+            'allocation_size_vs_time_heatmap',
+            'call_stack_trace_frequency',
+            'all'
+        ],
         default=['all'],
-        help='Types of plots to generate.'
+        help='Types of plots to generate. Choose from the list or select "all" for all plots.'
     )
 
     args = parser.parse_args()
@@ -62,19 +73,70 @@ def main():
     # Generates plots based on user input
     plots_to_generate = args.plots
     if 'all' in plots_to_generate:
-        plots_to_generate = ['line', 'bar', 'heatmap']
+        plots_to_generate = [
+            'memory_usage_over_time',
+            'allocation_deallocation_rates',
+            'allocation_latency_over_time',
+            'allocation_size_distribution',
+            'memory_usage_by_source',
+            'number_of_allocations_by_source',
+            'average_allocation_latency_by_source',
+            'allocation_size_vs_time_heatmap',
+            'call_stack_trace_frequency'
+        ]
 
-    if 'line' in plots_to_generate:
-        output_path = os.path.join(output_dir, 'line_plot.png') if output_dir else None
-        viz.line_plot_time(df, output_path=output_path)
+    # Mapping of plot types to Visualizer methods and output filenames
+    plot_methods = {
+        'memory_usage_over_time': {
+            'method': viz.total_memory_usage_over_time,
+            'filename': 'total_memory_usage_over_time.png'
+        },
+        'allocation_deallocation_rates': {
+            'method': viz.allocation_deallocation_rates_over_time,
+            'filename': 'allocation_deallocation_rates_over_time.png'
+        },
+        'allocation_latency_over_time': {
+            'method': viz.allocation_latency_over_time,
+            'filename': 'allocation_latency_over_time.png'
+        },
+        'allocation_size_distribution': {
+            'method': viz.allocation_size_distribution,
+            'filename': 'allocation_size_distribution.png'
+        },
+        'memory_usage_by_source': {
+            'method': viz.memory_usage_by_source,
+            'filename': 'memory_usage_by_source.png'
+        },
+        'number_of_allocations_by_source': {
+            'method': viz.number_of_allocations_by_source,
+            'filename': 'number_of_allocations_by_source.png'
+        },
+        'average_allocation_latency_by_source': {
+            'method': viz.average_allocation_latency_by_source,
+            'filename': 'average_allocation_latency_by_source.png'
+        },
+        'allocation_size_vs_time_heatmap': {
+            'method': viz.allocation_size_vs_time_heatmap,
+            'filename': 'allocation_size_vs_time_heatmap.png'
+        },
+        'call_stack_trace_frequency': {
+            'method': viz.call_stack_trace_frequency,
+            'filename': 'call_stack_trace_frequency.png'
+        }
+    }
 
-    if 'bar' in plots_to_generate:
-        output_path = os.path.join(output_dir, 'bar_chart.png') if output_dir else None
-        viz.bar_chart_block_size(df, output_path=output_path)
+    for plot_type in plots_to_generate:
+        if plot_type in plot_methods:
+            method = plot_methods[plot_type]['method']
+            filename = plot_methods[plot_type]['filename']
+            output_path = os.path.join(output_dir, filename) if output_dir else None
+            readable_plot_name = plot_type.replace('_', ' ').title()
+            print(f"Generating plot: {readable_plot_name}")
+            method(df, output_path=output_path)
+        else:
+            print(f"Plot type '{plot_type}' is not recognized and will be skipped.")
 
-    if 'heatmap' in plots_to_generate:
-        output_path = os.path.join(output_dir, 'heatmap.png') if output_dir else None
-        viz.heatmap_fragmentation(df, output_path=output_path)
+    print("All requested plots have been generated.")
 
 
 if __name__ == '__main__':

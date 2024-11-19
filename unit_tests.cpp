@@ -6,6 +6,11 @@ TEST(CustomAllocatorTest, AllocationDeallocation) {
     CustomAllocator allocator(5, 20);
     void* ptr = allocator.allocate(64);
     EXPECT_NE(ptr, nullptr);
+    
+    std::string allocID = allocator.getAllocationID(ptr);
+    EXPECT_FALSE(allocID.empty());
+    EXPECT_NE(allocID, "");
+
     allocator.deallocate(ptr);
     EXPECT_DOUBLE_EQ(allocator.getFragmentation(), 1.0);
 }

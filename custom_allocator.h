@@ -6,12 +6,14 @@
 #include <vector>
 #include <list>
 #include <mutex>
+#include <atomic>
+#include <string>
+#include <sstream>
 
 /**
  * @class CustomAllocator
  * @brief A custom memory allocator implementing the buddy allocation algorithm.
  */
-
 class CustomAllocator {
 public:
     CustomAllocator(size_t min_order, size_t max_order);
@@ -25,11 +27,16 @@ public:
     double getDeallocationTime() const;
     double getFragmentation() const;
 
+    // Public methods to access allocation information
+    std::string getAllocationID(void* ptr);
+    std::string getMemoryAddress(void* ptr);
+
 private:
     struct Block {
         size_t order;
         bool free;
         Block* next;
+        std::string allocationID; // Unique ID for each allocation
     };
 
     size_t minOrder;
@@ -37,7 +44,7 @@ private:
     size_t totalSize;
     void* memoryPool;
 
-    // Frees lists for each order
+    // Free lists for each order
     std::vector<std::list<Block*>> freeLists;
 
     // Timing metrics
@@ -50,6 +57,9 @@ private:
     // Mutex for thread safety
     std::mutex allocatorMutex;
 
+    // Allocation counter for generating unique IDs
+    std::atomic<size_t> allocationCounter;
+
     // Helper functions
     size_t sizeToOrder(size_t size) const;
     Block* splitBlock(Block* block, size_t targetOrder);
@@ -59,6 +69,9 @@ private:
     // Instrumentation functions
     void recordAllocationTime(double time);
     void recordDeallocationTime(double time);
+
+    // Generates a unique Allocation ID
+    std::string generateAllocationID();
 };
 
 #endif // CUSTOM_ALLOCATOR_H

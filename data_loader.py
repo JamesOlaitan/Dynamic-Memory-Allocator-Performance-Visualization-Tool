@@ -68,7 +68,7 @@ class DataLoader:
             The preprocessed DataFrame.
         """
         # Converts 'Timestamp' to datetime
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
 
         # Converts 'Operation' to categorical
         df['Operation'] = df['Operation'].astype('category')
@@ -77,6 +77,19 @@ class DataLoader:
         df['BlockSize'] = pd.to_numeric(df['BlockSize'], errors='coerce')
         df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
         df['Fragmentation'] = pd.to_numeric(df['Fragmentation'], errors='coerce')
+
+        # Converts 'MemoryAddress' to string (in case it's read as numeric)
+        df['MemoryAddress'] = df['MemoryAddress'].astype(str)
+
+        # Converts 'ThreadID' to categorical
+        df['ThreadID'] = df['ThreadID'].astype('category')
+
+        # Converts 'AllocationID' to string
+        df['AllocationID'] = df['AllocationID'].astype(str)
+
+        # Handles 'Source' and 'CallStack' columns (ensure they are strings)
+        df['Source'] = df['Source'].astype(str)
+        df['CallStack'] = df['CallStack'].astype(str)
 
         # Drops rows with any NaN values that resulted from conversion errors
         df = df.dropna()

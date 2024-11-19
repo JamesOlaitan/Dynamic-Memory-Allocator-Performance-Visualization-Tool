@@ -10,7 +10,16 @@ public:
     DataLogger(const std::string& filename);
     ~DataLogger();
 
-    void log(const std::string& timestamp, const std::string& operation, size_t blockSize, double time, double fragmentation);
+    void log(const std::string& timestamp,
+             const std::string& operation,
+             size_t blockSize,
+             double time,
+             double fragmentation,
+             const std::string& source,
+             const std::string& callStack,
+             const std::string& memoryAddress,
+             const std::string& threadID,
+             const std::string& allocationID);
 
 private:
     std::ofstream logFile;
