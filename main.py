@@ -3,7 +3,6 @@ import os
 from data_loader import DataLoader
 from visualizer import Visualizer
 
-
 def main():
     """
     The main entry point for the visualization tool.
@@ -24,7 +23,7 @@ def main():
     parser.add_argument(
         '-o', '--output',
         type=str,
-        default=None,
+        default='plots', 
         help='Output directory to save the plots. If not specified, plots are displayed.'
     )
     parser.add_argument(
@@ -49,16 +48,16 @@ def main():
     args = parser.parse_args()
 
     # Validates and creates output directory if needed
-    if args.output:
-        output_dir = os.path.abspath(args.output)
-        try:
-            if not os.path.isdir(output_dir):
-                os.makedirs(output_dir, exist_ok=True)
-        except Exception as e:
-            print(f"Error creating output directory '{output_dir}': {e}")
-            return
-    else:
-        output_dir = None
+    output_dir = os.path.abspath(args.output)
+    try:
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            print(f"Created output directory at: {output_dir}")
+        else:
+            print(f"Using existing output directory at: {output_dir}")
+    except Exception as e:
+        print(f"Error creating output directory '{output_dir}': {e}")
+        return
 
     # Loads and preprocesses data
     loader = DataLoader(args.input)
@@ -129,7 +128,7 @@ def main():
         if plot_type in plot_methods:
             method = plot_methods[plot_type]['method']
             filename = plot_methods[plot_type]['filename']
-            output_path = os.path.join(output_dir, filename) if output_dir else None
+            output_path = os.path.join(output_dir, filename)
             readable_plot_name = plot_type.replace('_', ' ').title()
             print(f"Generating plot: {readable_plot_name}")
             method(df, output_path=output_path)
@@ -137,7 +136,6 @@ def main():
             print(f"Plot type '{plot_type}' is not recognized and will be skipped.")
 
     print("All requested plots have been generated.")
-
 
 if __name__ == '__main__':
     main()

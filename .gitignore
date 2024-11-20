@@ -15,3 +15,27 @@ __pycache__/
 # Ignores logs and temporary files
 *.log
 *.tmp
+*.err
+*.out
+
+# Ignores compiled C++ files and build artifacts
+*.o
+*.out
+*.exe
+*.app
+*.dSYM/
+build/
+
+# Ignores generated plots and temporary data
+plots/
+*.png
+*.jpg
+*.svg
+*.csv
+
+# Ignores VS Code temporary file
+tempCodeRunnerFile.py
+
+# macOS metadata files
+.DS_Store
+.AppleDouble

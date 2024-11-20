@@ -3,7 +3,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from typing import Optional
 import numpy as np
+import os
+import warnings
 
+# Suppress non-critical warnings (Optional)
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 
 class Visualizer:
     """
@@ -38,6 +43,35 @@ class Visualizer:
         """
         sns.set_theme(style="whitegrid")
 
+    def set_x_limits(self, plt_obj, timestamps: pd.Series, buffer_ratio: float = 0.05):
+        """
+        Sets the x-axis limits based on the data's timestamp range with a buffer.
+
+        Parameters
+        ----------
+        plt_obj : matplotlib.pyplot
+            The matplotlib pyplot object.
+        timestamps : pd.Series
+            The series containing timestamp data.
+        buffer_ratio : float, default=0.05
+            The ratio of the time span to add as a buffer on both ends.
+
+        Returns
+        -------
+        None
+        """
+        min_timestamp = timestamps.min()
+        max_timestamp = timestamps.max()
+        time_span = max_timestamp - min_timestamp
+        buffer = time_span * buffer_ratio
+
+        # Handle cases where time_span is zero or negative
+        if time_span.total_seconds() > 0:
+            plt_obj.xlim(min_timestamp - buffer, max_timestamp + buffer)
+        else:
+            # If all timestamps are the same, set arbitrary limits
+            plt_obj.xlim(min_timestamp - pd.Timedelta(seconds=1), max_timestamp + pd.Timedelta(seconds=1))
+
     def total_memory_usage_over_time(self, df: pd.DataFrame, output_path: Optional[str] = None) -> None:
         """
         Plots total memory usage over time.
@@ -52,14 +86,9 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
-            df_sorted = df.sort_values('Timestamp')
+            df_sorted = df.sort_values('Timestamp').copy()
             df_sorted['NetMemoryChange'] = df_sorted.apply(
                 lambda row: row['BlockSize'] if row['Operation'] == 'Allocation' else -row['BlockSize'], axis=1)
             df_sorted['TotalMemory'] = df_sorted['NetMemoryChange'].cumsum()
@@ -69,14 +98,18 @@ class Visualizer:
             plt.title('Total Memory Usage Over Time')
             plt.xlabel('Timestamp')
             plt.ylabel('Total Allocated Memory (bytes)')
+
+            # Set x-axis limits based on data
+            self.set_x_limits(plt, df_sorted['Timestamp'])
+
             plt.tight_layout()
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Total memory usage plot saved to {output_path}")
+                print(f"Total memory usage plot saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)  # Wait until the plot window is closed
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the total memory usage plot: {e}")
@@ -98,26 +131,19 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
-            df.set_index('Timestamp', inplace=True)
-            counts = df.groupby([pd.Grouper(freq=interval.lower()), 'Operation'], observed=False).size().unstack(fill_value=0)
+            df_temp = df.copy()
+            df_temp.set_index('Timestamp', inplace=True)
+            counts = df_temp.groupby([pd.Grouper(freq=interval.lower()), 'Operation'], observed=False).size().unstack(fill_value=0)
 
             if counts.empty:
                 print("No data available for Allocation/Deallocation Rates Over Time plot.")
-                df.reset_index(inplace=True)
                 return
 
-            # Check if there is more than one unique timestamp after grouping
             unique_timestamps = counts.index.nunique()
             if unique_timestamps < 2:
                 print("Insufficient variation in timestamps for Allocation/Deallocation Rates Over Time plot.")
-                df.reset_index(inplace=True)
                 return
 
             plt.figure(figsize=(12, 6))
@@ -126,16 +152,19 @@ class Visualizer:
             plt.xlabel('Timestamp')
             plt.ylabel('Number of Operations')
             plt.legend(title='Operation')
+
+            # Set x-axis limits based on data
+            self.set_x_limits(plt, counts.index)
+
             plt.tight_layout()
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Allocation/deallocation rates plot saved to {output_path}")
+                print(f"Allocation/deallocation rates plot saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)
                 plt.close()
-            df.reset_index(inplace=True)
         except Exception as e:
             print(f"An error occurred while generating the allocation/deallocation rates plot: {e}")
 
@@ -153,11 +182,6 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
             if df.empty:
@@ -178,14 +202,18 @@ class Visualizer:
             plt.xlabel('Timestamp')
             plt.ylabel('Latency (seconds)')
             plt.legend(title='Operation')
+
+            # Set x-axis limits based on data
+            self.set_x_limits(plt, df['Timestamp'])
+
             plt.tight_layout()
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Allocation latency plot saved to {output_path}")
+                print(f"Allocation latency plot saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the allocation latency plot: {e}")
@@ -204,11 +232,6 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
             alloc_df = df[df['Operation'] == 'Allocation']
@@ -225,10 +248,10 @@ class Visualizer:
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Allocation size distribution plot saved to {output_path}")
+                print(f"Allocation size distribution plot saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the allocation size distribution plot: {e}")
@@ -247,11 +270,6 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
             alloc_df = df[df['Operation'] == 'Allocation']
@@ -269,7 +287,6 @@ class Visualizer:
                 data=memory_by_source,
                 x='Source',
                 y='BlockSize'
-                # Removed 'palette' to avoid FutureWarning
             )
             plt.title('Total Memory Usage by Source')
             plt.xlabel('Source')
@@ -279,10 +296,10 @@ class Visualizer:
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Memory usage by source plot saved to {output_path}")
+                print(f"Memory usage by source plot saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the memory usage by source plot: {e}")
@@ -301,11 +318,6 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
             alloc_df = df[df['Operation'] == 'Allocation']
@@ -324,7 +336,6 @@ class Visualizer:
                 data=counts_by_source,
                 x='Source',
                 y='AllocationCount'
-                # Removed 'palette' to avoid FutureWarning
             )
             plt.title('Number of Allocations by Source')
             plt.xlabel('Source')
@@ -334,10 +345,10 @@ class Visualizer:
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Number of allocations by source plot saved to {output_path}")
+                print(f"Number of allocations by source plot saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the number of allocations by source plot: {e}")
@@ -356,11 +367,6 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
             alloc_df = df[df['Operation'] == 'Allocation']
@@ -378,7 +384,6 @@ class Visualizer:
                 data=latency_by_source,
                 x='Source',
                 y='Time'
-                # Removed 'palette' to avoid FutureWarning
             )
             plt.title('Average Allocation Latency by Source')
             plt.xlabel('Source')
@@ -388,10 +393,10 @@ class Visualizer:
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Average allocation latency by source plot saved to {output_path}")
+                print(f"Average allocation latency by source plot saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the average allocation latency by source plot: {e}")
@@ -410,11 +415,6 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
             alloc_df = df[df['Operation'] == 'Allocation'].copy()
@@ -422,7 +422,7 @@ class Visualizer:
                 print("No allocation data available for Allocation Size Vs Time Heatmap plot.")
                 return
 
-            # Use .loc to avoid SettingWithCopyWarning
+            # Create TimeBin and SizeBin using .loc to avoid SettingWithCopyWarning
             alloc_df.loc[:, 'TimeBin'] = pd.cut(alloc_df['Timestamp'], bins=50)
             alloc_df.loc[:, 'SizeBin'] = pd.cut(alloc_df['BlockSize'], bins=50)
 
@@ -457,10 +457,10 @@ class Visualizer:
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Allocation size vs. time heatmap saved to {output_path}")
+                print(f"Allocation size vs. time heatmap saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the allocation size vs. time heatmap: {e}")
@@ -479,11 +479,6 @@ class Visualizer:
         Returns
         -------
         None
-
-        Raises
-        ------
-        Exception
-            If an error occurs while generating the plot.
         """
         try:
             alloc_df = df[df['Operation'] == 'Allocation']
@@ -502,7 +497,6 @@ class Visualizer:
                 data=callstack_counts,
                 x='CallStack',
                 y='AllocationCount'
-                # Removed 'palette' to avoid FutureWarning
             )
             plt.title('Allocation Frequency by Call Stack Trace')
             plt.xlabel('Call Stack Trace')
@@ -512,10 +506,10 @@ class Visualizer:
 
             if output_path:
                 plt.savefig(output_path)
-                print(f"Call stack trace frequency plot saved to {output_path}")
+                print(f"Call stack trace frequency plot saved to {os.path.abspath(output_path)}")
                 plt.close()
             else:
-                plt.show(block=False)
+                plt.show(block=True)
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the call stack trace frequency plot: {e}")
