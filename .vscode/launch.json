@@ -24,6 +24,7 @@
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
+            "preLaunchTask": "Build Unit Tests",
             "MIMode": "lldb"
         },
         {
@@ -35,12 +36,32 @@
                 "--test", "sequential",
                 "--num-ops", "1000",
                 "--block-size", "128",
-                "--output-file", "performance_data.csv"
+                "--output-file", "allocator_tests_data.csv"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
+            "preLaunchTask": "Build Allocator Tests",
+            "MIMode": "lldb"
+        },
+        {
+            "name": "Run Performance Tests",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/performance_tests",
+            "args": [
+                "--benchmark", "fixed",             // Can be changed as needed: fixed, variable, throughput
+                "--block-size", "128",              // Relevant for fixed and throughput
+                "--num-ops", "100000",              // Relevant for fixed and variable
+                "--duration", "10.0",               // Relevant for throughput
+                "--output-file", "performance_data.csv" // Ensures correct filename or use a separate file
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Build Performance Tests",
             "MIMode": "lldb"
         }
     ]

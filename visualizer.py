@@ -10,6 +10,7 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 
+
 class Visualizer:
     """
     A class for generating visualizations from performance data.
@@ -35,6 +36,8 @@ class Visualizer:
         Creates a heatmap of allocation sizes over time.
     call_stack_trace_frequency(df: pd.DataFrame, output_path: Optional[str] = None) -> None
         Plots the frequency of allocations from each call stack.
+    throughput_trends(df: pd.DataFrame, output_path: Optional[str] = None) -> None
+        Plots allocation and deallocation throughput trends over multiple benchmarks.
     """
 
     def __init__(self):
@@ -88,7 +91,8 @@ class Visualizer:
         None
         """
         try:
-            df_sorted = df.sort_values('Timestamp').copy()
+            # Exclude summary logs
+            df_sorted = df[df['Operation'] != 'Summary'].sort_values('Timestamp').copy()
             df_sorted['NetMemoryChange'] = df_sorted.apply(
                 lambda row: row['BlockSize'] if row['Operation'] == 'Allocation' else -row['BlockSize'], axis=1)
             df_sorted['TotalMemory'] = df_sorted['NetMemoryChange'].cumsum()
@@ -133,7 +137,8 @@ class Visualizer:
         None
         """
         try:
-            df_temp = df.copy()
+            # Exclude summary logs
+            df_temp = df[df['Operation'] != 'Summary'].copy()
             df_temp.set_index('Timestamp', inplace=True)
             counts = df_temp.groupby([pd.Grouper(freq=interval.lower()), 'Operation'], observed=False).size().unstack(fill_value=0)
 
@@ -184,6 +189,8 @@ class Visualizer:
         None
         """
         try:
+            # Exclude summary logs
+            df = df[df['Operation'] != 'Summary']
             if df.empty:
                 print("No data available for Allocation Latency Over Time plot.")
                 return
@@ -234,7 +241,7 @@ class Visualizer:
         None
         """
         try:
-            alloc_df = df[df['Operation'] == 'Allocation']
+            alloc_df = df[(df['Operation'] == 'Allocation') & (df['Operation'] != 'Summary')]
             if alloc_df.empty:
                 print("No allocation data available for Allocation Size Distribution plot.")
                 return
@@ -272,7 +279,7 @@ class Visualizer:
         None
         """
         try:
-            alloc_df = df[df['Operation'] == 'Allocation']
+            alloc_df = df[(df['Operation'] == 'Allocation') & (df['Operation'] != 'Summary')]
             if alloc_df.empty:
                 print("No allocation data available for Memory Usage By Source plot.")
                 return
@@ -320,7 +327,7 @@ class Visualizer:
         None
         """
         try:
-            alloc_df = df[df['Operation'] == 'Allocation']
+            alloc_df = df[(df['Operation'] == 'Allocation') & (df['Operation'] != 'Summary')]
             if alloc_df.empty:
                 print("No allocation data available for Number of Allocations By Source plot.")
                 return
@@ -369,7 +376,7 @@ class Visualizer:
         None
         """
         try:
-            alloc_df = df[df['Operation'] == 'Allocation']
+            alloc_df = df[(df['Operation'] == 'Allocation') & (df['Operation'] != 'Summary')]
             if alloc_df.empty:
                 print("No allocation data available for Average Allocation Latency By Source plot.")
                 return
@@ -417,7 +424,7 @@ class Visualizer:
         None
         """
         try:
-            alloc_df = df[df['Operation'] == 'Allocation'].copy()
+            alloc_df = df[(df['Operation'] == 'Allocation') & (df['Operation'] != 'Summary')].copy()
             if alloc_df.empty:
                 print("No allocation data available for Allocation Size Vs Time Heatmap plot.")
                 return
@@ -481,7 +488,7 @@ class Visualizer:
         None
         """
         try:
-            alloc_df = df[df['Operation'] == 'Allocation']
+            alloc_df = df[(df['Operation'] == 'Allocation') & (df['Operation'] != 'Summary')]
             if alloc_df.empty:
                 print("No allocation data available for Call Stack Trace Frequency plot.")
                 return
@@ -513,3 +520,62 @@ class Visualizer:
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the call stack trace frequency plot: {e}")
+
+    def throughput_trends(self, df: pd.DataFrame, output_path: Optional[str] = None) -> None:
+        """
+        Plots allocation and deallocation throughput trends over multiple benchmarks.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The preprocessed DataFrame containing performance data, including summary logs.
+        output_path : Optional[str], default=None
+            The file path to save the throughput trends plot image. If None, the plot is displayed.
+
+        Returns
+        -------
+        None
+        """
+        try:
+            # Filter summary logs
+            summary_df = df[df['Operation'] == 'Summary'].copy()
+            if summary_df.empty:
+                print("No summary data available for Throughput Trends plot.")
+                return
+
+            # Extract throughput and fragmentation from summary logs
+            # Assuming 'Time' = allocThroughput, 'Fragmentation' = deallocThroughput,
+            # 'Source' = fragmentation percentage, 'CallStack' = summary description
+
+            summary_df['AllocThroughput'] = summary_df['Time']
+            summary_df['DeallocThroughput'] = summary_df['Fragmentation']
+            summary_df['Fragmentation'] = summary_df['Source']
+            summary_df['BenchmarkDescription'] = summary_df['CallStack']
+
+            # Convert 'Timestamp' to datetime if not already
+            if not np.issubdtype(summary_df['Timestamp'].dtype, np.datetime64):
+                summary_df['Timestamp'] = pd.to_datetime(summary_df['Timestamp'])
+
+            # Sort by Timestamp
+            summary_df.sort_values('Timestamp', inplace=True)
+
+            # Plot Allocation Throughput Over Time
+            plt.figure(figsize=(12, 6))
+            sns.lineplot(data=summary_df, x='Timestamp', y='AllocThroughput', marker='o', label='Allocation Throughput')
+            sns.lineplot(data=summary_df, x='Timestamp', y='DeallocThroughput', marker='o', label='Deallocation Throughput')
+            plt.title('Throughput Trends Over Time')
+            plt.xlabel('Benchmark Timestamp')
+            plt.ylabel('Throughput (operations per second)')
+            plt.legend()
+            plt.tight_layout()
+
+            if output_path:
+                plt.savefig(output_path)
+                print(f"Throughput trends plot saved to {os.path.abspath(output_path)}")
+                plt.close()
+            else:
+                plt.show(block=True)
+                plt.close()
+
+        except Exception as e:
+            print(f"An error occurred while generating the throughput trends plot: {e}")

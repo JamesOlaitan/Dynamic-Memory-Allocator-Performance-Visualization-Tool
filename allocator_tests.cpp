@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
         ("max-block-size", "Maximum block size in bytes", cxxopts::value<size_t>()->default_value("512"))
         ("min-order", "Minimum order", cxxopts::value<size_t>()->default_value("5"))
         ("max-order", "Maximum order", cxxopts::value<size_t>()->default_value("20"))
-        ("output-file", "Path to output file", cxxopts::value<std::string>()->default_value("performance_data.csv"))
+        ("output-file", "Path to output file", cxxopts::value<std::string>()->default_value("allocator_tests_data.csv"))
         ("help", "Print help");
 
     auto result = options.parse(argc, argv);
@@ -75,6 +75,13 @@ int main(int argc, char* argv[]) {
     size_t minOrder = result["min-order"].as<size_t>();
     size_t maxOrder = result["max-order"].as<size_t>();
     std::string outputFile = result["output-file"].as<std::string>();
+
+
+    // Validates output file
+    if (outputFile.empty()) {
+        outputFile = "allocator_tests_data.csv";
+        std::cerr << "Empty output file provided. Using default 'allocator_tests_data.csv'." << std::endl;
+    }
 
     // Initialize the DataLogger
     DataLogger logger(outputFile);

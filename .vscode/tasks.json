@@ -69,11 +69,33 @@
             "detail": "Build task for main"
         },
         {
+            "label": "Build Performance Tests",
+            "type": "shell",
+            "command": "/usr/bin/clang++",
+            "args": [
+                "-std=c++14",
+                "-g",
+                "${workspaceFolder}/performance_tests.cpp",
+                "${workspaceFolder}/custom_allocator.cpp",
+                "${workspaceFolder}/data_logger.cpp",
+                "-o",
+                "${workspaceFolder}/performance_tests",
+                "-pthread"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$gcc",
+            "group": "build",
+            "detail": "Build task for performance_tests"
+        },
+        {
             "label": "Build All",
             "dependsOn": [
                 "Build Allocator Tests",
                 "Build Unit Tests",
-                "Build Main"
+                "Build Main",
+                "Build Performance Tests"
             ],
             "group": {
                 "kind": "build",
