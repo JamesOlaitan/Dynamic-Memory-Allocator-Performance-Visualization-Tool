@@ -80,7 +80,11 @@
                 "${workspaceFolder}/data_logger.cpp",
                 "-o",
                 "${workspaceFolder}/performance_tests",
-                "-pthread"
+                "-pthread",
+                "-I/opt/homebrew/include",
+                "-L/opt/homebrew/lib",
+                "-lbenchmark",
+                "-lbenchmark_main"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -90,12 +94,39 @@
             "detail": "Build task for performance_tests"
         },
         {
+            "label": "Build Stress Test",
+            "type": "shell",
+            "command": "/usr/bin/clang++",
+            "args": [
+                "-std=c++14",
+                "-g",
+                "${workspaceFolder}/stress_test.cpp",
+                "${workspaceFolder}/custom_allocator.cpp",
+                "${workspaceFolder}/data_logger.cpp",
+                "-o",
+                "${workspaceFolder}/stress_test",
+                "-I/opt/homebrew/include",
+                "-I/opt/homebrew/include/benchmark",
+                "-L/opt/homebrew/lib",
+                "-lbenchmark",
+                "-lbenchmark_main",
+                "-pthread"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$gcc",
+            "group": "build",
+            "detail": "Build task for stress_test"
+        },
+        {
             "label": "Build All",
             "dependsOn": [
                 "Build Allocator Tests",
                 "Build Unit Tests",
                 "Build Main",
-                "Build Performance Tests"
+                "Build Performance Tests",
+                "Build Stress Test"
             ],
             "group": {
                 "kind": "build",

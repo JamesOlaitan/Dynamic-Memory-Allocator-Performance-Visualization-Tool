@@ -39,3 +39,6 @@ tempCodeRunnerFile.py
 # macOS metadata files
 .DS_Store
 .AppleDouble
+
+
+stress_test.cpp

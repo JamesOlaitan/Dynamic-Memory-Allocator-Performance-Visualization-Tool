@@ -63,6 +63,22 @@
             "externalConsole": false,
             "preLaunchTask": "Build Performance Tests",
             "MIMode": "lldb"
+        },
+        {
+            "name": "Run Stress Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/stress_test",
+            "args": [
+                "--benchmark_out=stress_test_results.json",
+                "--benchmark_out_format=json"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Build Stress Test",
+            "MIMode": "lldb"
         }
     ]
 }
