@@ -32,6 +32,7 @@ plots/
 *.jpg
 *.svg
 *.csv
+*.json
 
 # Ignores VS Code temporary file
 tempCodeRunnerFile.py
@@ -39,6 +40,3 @@ tempCodeRunnerFile.py
 # macOS metadata files
 .DS_Store
 .AppleDouble
-
-
-stress_test.cpp

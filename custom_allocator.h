@@ -31,6 +31,10 @@ public:
     std::string getAllocationID(void* ptr);
     std::string getMemoryAddress(void* ptr);
 
+    // Getter methods for throughput metrics
+    size_t getTotalAllocations() const;
+    size_t getTotalDeallocations() const;
+
 private:
     struct Block {
         size_t order;
@@ -57,8 +61,10 @@ private:
     // Mutex for thread safety
     std::mutex allocatorMutex;
 
-    // Allocation counter for generating unique IDs
+    // Allocation counters for generating unique IDs and tracking throughput
     std::atomic<size_t> allocationCounter;
+    std::atomic<size_t> totalAllocations;
+    std::atomic<size_t> totalDeallocations;
 
     // Helper functions
     size_t sizeToOrder(size_t size) const;

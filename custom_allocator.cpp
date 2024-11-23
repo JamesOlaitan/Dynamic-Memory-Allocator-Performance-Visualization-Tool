@@ -6,7 +6,8 @@
 #include <thread>
 
 CustomAllocator::CustomAllocator(size_t min_order, size_t max_order)
-    : minOrder(min_order), maxOrder(max_order), allocationTime(0.0), deallocationTime(0.0), allocationCounter(0) {
+    : minOrder(min_order), maxOrder(max_order), allocationTime(0.0), deallocationTime(0.0),
+      allocationCounter(0), totalAllocations(0), totalDeallocations(0) { // Initializes atomic counters
     totalSize = 1 << maxOrder;
     memoryPool = std::malloc(totalSize);
     totalFreeMemory = totalSize;
@@ -32,7 +33,7 @@ CustomAllocator::~CustomAllocator() {
  * @return A unique allocation ID as a string.
  */
 std::string CustomAllocator::generateAllocationID() {
-    size_t id = allocationCounter.fetch_add(1);
+    size_t id = allocationCounter.fetch_add(1, std::memory_order_relaxed);
     std::ostringstream oss;
     oss << "Alloc" << id;
     return oss.str();
@@ -80,10 +81,12 @@ void* CustomAllocator::allocate(size_t size) {
             block->allocationID = generateAllocationID();
             totalFreeMemory -= (1 << block->order);
 
+            totalAllocations.fetch_add(1, std::memory_order_relaxed);
+
             auto endTime = std::chrono::high_resolution_clock::now();
             recordAllocationTime(std::chrono::duration<double>(endTime - startTime).count());
 
-            // Return the memory address after the block metadata
+            // Returns the memory address after the block metadata
             return reinterpret_cast<void*>(reinterpret_cast<char*>(block) + sizeof(Block));
         }
     }
@@ -105,6 +108,8 @@ void CustomAllocator::deallocate(void* ptr) {
     Block* block = reinterpret_cast<Block*>(reinterpret_cast<char*>(ptr) - sizeof(Block));
     block->free = true;
     totalFreeMemory += (1 << block->order);
+
+    totalDeallocations.fetch_add(1, std::memory_order_relaxed);
 
     // Merge with buddy blocks if possible
     Block* mergedBlock = mergeBlock(block);
@@ -189,4 +194,12 @@ double CustomAllocator::getDeallocationTime() const {
 
 double CustomAllocator::getFragmentation() const {
     return static_cast<double>(totalFreeMemory) / totalSize;
+}
+
+size_t CustomAllocator::getTotalAllocations() const {
+    return totalAllocations.load(std::memory_order_relaxed);
+}
+
+size_t CustomAllocator::getTotalDeallocations() const {
+    return totalDeallocations.load(std::memory_order_relaxed);
 }
