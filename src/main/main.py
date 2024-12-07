@@ -1,7 +1,7 @@
 import argparse
 import os
-from data_loader import DataLoader
-from visualizer import Visualizer
+from scripts.data_loader import DataLoader
+from scripts.visualizer import Visualizer
 from typing import List
 
 def main():
