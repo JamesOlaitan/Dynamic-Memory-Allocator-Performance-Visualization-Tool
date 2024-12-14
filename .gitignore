@@ -34,8 +34,8 @@ plots/
 *.csv
 *.json
 
-logs/*.csv
-logs/*.json
+data/logs/*.csv
+data/logs/*.json
 
 # Ignores VS Code temporary file
 tempCodeRunnerFile.py
