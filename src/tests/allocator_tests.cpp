@@ -6,7 +6,8 @@
 #include <iomanip>
 #include <sstream>
 #include <thread>
-#include "cxxopts.hpp"
+#include <filesystem>
+#include "config_manager.h"
 #include "custom_allocator.h"
 #include "data_logger.h"
 
@@ -46,42 +47,48 @@ void mixedSizesTest(CustomAllocator& allocator, const std::vector<size_t>& sizeD
  */
 int main(int argc, char* argv[]) {
     std::cout << "Running allocator_tests.cpp main function." << std::endl;
-    cxxopts::Options options("allocator_tests", "Dynamic Memory Allocator Performance Tests");
 
-    options.add_options()
-        ("test", "Test type [sequential|random|mixed]", cxxopts::value<std::string>()->default_value("sequential"))
-        ("num-ops", "Number of operations", cxxopts::value<size_t>()->default_value("1000"))
-        ("block-size", "Block size in bytes", cxxopts::value<size_t>()->default_value("64"))
-        ("min-block-size", "Minimum block size in bytes", cxxopts::value<size_t>()->default_value("32"))
-        ("max-block-size", "Maximum block size in bytes", cxxopts::value<size_t>()->default_value("512"))
-        ("min-order", "Minimum order", cxxopts::value<size_t>()->default_value("5"))
-        ("max-order", "Maximum order", cxxopts::value<size_t>()->default_value("20"))
-        ("output-file", "Path to output file", cxxopts::value<std::string>()->default_value("allocator_tests_data.csv"))
-        ("help", "Print help");
+    // Initialize ConfigManager
+    ConfigManager config("config/default.toml");
+    config.parseCLI(argc, argv, "allocator_tests", "Dynamic Memory Allocator Performance Tests");
 
-    auto result = options.parse(argc, argv);
-
-    if (result.count("help")) {
-        std::cout << options.help() << std::endl;
+    if (config.helpRequested()) {
+        std::cout << config.getHelpMessage() << std::endl;
         return 0;
     }
 
-    // Extract options
-    std::string testType = result["test"].as<std::string>();
-    size_t numOperations = result["num-ops"].as<size_t>();
-    size_t blockSize = result["block-size"].as<size_t>();
-    size_t minBlockSize = result["min-block-size"].as<size_t>();
-    size_t maxBlockSize = result["max-block-size"].as<size_t>();
-    size_t minOrder = result["min-order"].as<size_t>();
-    size_t maxOrder = result["max-order"].as<size_t>();
-    std::string outputFile = result["output-file"].as<std::string>();
-
-
-    // Validates output file
-    if (outputFile.empty()) {
-        outputFile = "allocator_tests_data.csv";
-        std::cerr << "Empty output file provided. Using default 'allocator_tests_data.csv'." << std::endl;
+    try {
+        config.validate();
+    } catch (const std::exception& e) {
+        std::cerr << "Configuration error: " << e.what() << std::endl;
+        return 1;
     }
+
+    // Extract configuration values
+    std::string testType = config.getString("test", "sequential");
+    size_t numOperations = config.getSize("ops", 1000);
+    size_t blockSize = config.getSize("block-size", 64);
+    size_t minBlockSize = config.getSize("min-block-size", 32);
+    size_t maxBlockSize = config.getSize("max-block-size", 512);
+    size_t minOrder = config.getSize("min-order", 6);
+    size_t maxOrder = config.getSize("max-order", 20);
+
+    // Prepare output file with timestamp
+    std::string outputDir = config.getString("out", "reports");
+    std::filesystem::create_directories(outputDir);
+    
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm tm_buf;
+#if defined(_WIN32) || defined(_WIN64)
+    localtime_s(&tm_buf, &in_time_t);
+#else
+    localtime_r(&in_time_t, &tm_buf);
+#endif
+    std::ostringstream oss;
+    oss << outputDir << "/allocator_tests_" 
+        << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
+    std::string outputFile = oss.str();
 
     // Initialize the DataLogger
     DataLogger logger(outputFile);

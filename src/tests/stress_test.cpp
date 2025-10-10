@@ -18,9 +18,14 @@
 #include <cstdlib>
 #include "custom_allocator.h"
 #include "data_logger.h"
+#include "config_manager.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <filesystem>
+
+// Global config manager (loaded from command line in main)
+static ConfigManager* g_config = nullptr;
 
 /**
  * @class AllocatorFixture
@@ -34,21 +39,35 @@ public:
     /**
      * @brief Set up the allocator and DataLogger before each benchmark.
      * 
-     * Initializes the CustomAllocator with specified min and max orders.
+     * Initializes the CustomAllocator with parameters from ConfigManager.
      *
      * @param state Benchmark state.
      */
     void SetUp(const ::benchmark::State& state) override {
-        // Define min_order and max_order
-        size_t min_order = 6;  // Example: 2^6 = 64 bytes
-        size_t max_order = 16; // Example: 2^16 = 65536 bytes
+        // Get configuration from global ConfigManager
+        size_t min_order = g_config->getSize("min-order", 6);
+        size_t max_order = g_config->getSize("max-order", 20);
 
         // Initialize the CustomAllocator
         allocator = new CustomAllocator(min_order, max_order);
 
-        // Initialize DataLogger with a specific log file
-        std::string logFilename = "stress_test_data.csv";
-        dataLogger = new DataLogger(logFilename);
+        // Initialize DataLogger with timestamped output file in reports directory
+        std::string outputDir = g_config->getString("out", "reports");
+        std::filesystem::create_directories(outputDir);
+        
+        auto now = std::chrono::system_clock::now();
+        auto in_time_t = std::chrono::system_clock::to_time_t(now);
+        std::tm tm_buf;
+#if defined(_WIN32) || defined(_WIN64)
+        localtime_s(&tm_buf, &in_time_t);
+#else
+        localtime_r(&in_time_t, &tm_buf);
+#endif
+        std::ostringstream oss;
+        oss << outputDir << "/stress_test_" 
+            << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
+        
+        dataLogger = new DataLogger(oss.str());
     }
 
     /**
@@ -251,6 +270,25 @@ BENCHMARK_REGISTER_F(AllocatorFixture, MaxLoadTest)
     ->Complexity();
 
 int main(int argc, char** argv) {
+    // Initialize ConfigManager
+    ConfigManager config("config/default.toml");
+    config.parseCLI(argc, argv, "stress_test", "Stress testing for CustomAllocator using Google Benchmark");
+    
+    if (config.helpRequested()) {
+        std::cout << config.getHelpMessage() << std::endl;
+        return 0;
+    }
+    
+    try {
+        config.validate();
+    } catch (const std::exception& e) {
+        std::cerr << "Configuration error: " << e.what() << std::endl;
+        return 1;
+    }
+    
+    // Store global config pointer for fixtures
+    g_config = &config;
+
     // Initialize Google Benchmark
     ::benchmark::Initialize(&argc, argv);
 

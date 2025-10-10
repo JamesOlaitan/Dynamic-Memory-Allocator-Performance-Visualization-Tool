@@ -1,5 +1,4 @@
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
 from typing import Optional
 import numpy as np
@@ -24,6 +23,8 @@ class Visualizer:
         Plots allocation and deallocation rates over time.
     allocation_latency_over_time(df: pd.DataFrame, output_path: Optional[str] = None) -> None
         Plots allocation and deallocation latency over time.
+    allocation_latency_percentiles(df: pd.DataFrame, output_path: Optional[str] = None) -> None
+        Plots allocation and deallocation latency percentiles (p50, p95, p99).
     allocation_size_distribution(df: pd.DataFrame, output_path: Optional[str] = None) -> None
         Plots the distribution of allocation sizes.
     memory_usage_by_source(df: pd.DataFrame, output_path: Optional[str] = None) -> None
@@ -42,9 +43,15 @@ class Visualizer:
 
     def __init__(self):
         """
-        Initializes the Visualizer class.
+        Initializes the Visualizer class with matplotlib styling.
         """
-        sns.set_theme(style="whitegrid")
+        # Use matplotlib style similar to seaborn whitegrid
+        plt.style.use('default')
+        plt.rcParams['axes.grid'] = True
+        plt.rcParams['grid.linestyle'] = '-'
+        plt.rcParams['grid.alpha'] = 0.3
+        plt.rcParams['axes.facecolor'] = '#EAEAF2'
+        plt.rcParams['figure.facecolor'] = 'white'
 
     def set_x_limits(self, plt_obj, timestamps: pd.Series, buffer_ratio: float = 0.05):
         """
@@ -98,10 +105,10 @@ class Visualizer:
             df_sorted['TotalMemory'] = df_sorted['NetMemoryChange'].cumsum()
 
             plt.figure(figsize=(12, 6))
-            sns.lineplot(data=df_sorted, x='Timestamp', y='TotalMemory')
-            plt.title('Total Memory Usage Over Time')
-            plt.xlabel('Timestamp')
-            plt.ylabel('Total Allocated Memory (bytes)')
+            plt.plot(df_sorted['Timestamp'], df_sorted['TotalMemory'], linewidth=2)
+            plt.title('Total Memory Usage Over Time', fontsize=14, fontweight='bold')
+            plt.xlabel('Timestamp', fontsize=12)
+            plt.ylabel('Total Allocated Memory (bytes)', fontsize=12)
 
             # Set x-axis limits based on data
             self.set_x_limits(plt, df_sorted['Timestamp'])
@@ -196,19 +203,14 @@ class Visualizer:
                 return
 
             plt.figure(figsize=(12, 6))
-            sns.lineplot(
-                data=df,
-                x='Timestamp',
-                y='Time',
-                hue='Operation',
-                style='Operation',
-                markers=True,
-                dashes=False
-            )
-            plt.title('Allocation/Deallocation Latency Over Time')
-            plt.xlabel('Timestamp')
-            plt.ylabel('Latency (seconds)')
-            plt.legend(title='Operation')
+            for operation in df['Operation'].unique():
+                op_data = df[df['Operation'] == operation]
+                plt.plot(op_data['Timestamp'], op_data['Time'], 
+                        marker='o', label=operation, alpha=0.7, linewidth=1.5)
+            plt.title('Allocation/Deallocation Latency Over Time', fontsize=14, fontweight='bold')
+            plt.xlabel('Timestamp', fontsize=12)
+            plt.ylabel('Latency (seconds)', fontsize=12)
+            plt.legend(title='Operation', loc='best')
 
             # Set x-axis limits based on data
             self.set_x_limits(plt, df['Timestamp'])
@@ -224,6 +226,73 @@ class Visualizer:
                 plt.close()
         except Exception as e:
             print(f"An error occurred while generating the allocation latency plot: {e}")
+
+    def allocation_latency_percentiles(self, df: pd.DataFrame, output_path: Optional[str] = None, 
+                                      window_size: str = '10s') -> None:
+        """
+        Plots allocation and deallocation latency percentiles (p50, p95, p99) over time windows.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The preprocessed DataFrame containing performance data.
+        output_path : Optional[str], default=None
+            The file path to save the plot image. If None, the plot is displayed.
+        window_size : str, default='10s'
+            Rolling window size for percentile calculations (e.g., '10s', '1min').
+
+        Returns
+        -------
+        None
+        """
+        try:
+            # Exclude summary logs
+            df = df[df['Operation'] != 'Summary'].copy()
+            if df.empty:
+                print("No data available for Allocation Latency Percentiles plot.")
+                return
+
+            # Create separate plots for Allocation and Deallocation
+            fig, axes = plt.subplots(2, 1, figsize=(14, 10))
+
+            for idx, operation in enumerate(['Allocation', 'Deallocation']):
+                op_data = df[df['Operation'] == operation].copy()
+                if op_data.empty:
+                    print(f"No {operation} data available for percentile calculation.")
+                    continue
+
+                # Sort by timestamp and set as index
+                op_data = op_data.sort_values('Timestamp').set_index('Timestamp')
+
+                # Calculate rolling percentiles
+                p50 = op_data['Time'].rolling(window=window_size).quantile(0.50)
+                p95 = op_data['Time'].rolling(window=window_size).quantile(0.95)
+                p99 = op_data['Time'].rolling(window=window_size).quantile(0.99)
+
+                # Plot percentiles
+                axes[idx].plot(p50.index, p50.values, label='p50 (Median)', linewidth=2, alpha=0.8)
+                axes[idx].plot(p95.index, p95.values, label='p95', linewidth=2, alpha=0.8)
+                axes[idx].plot(p99.index, p99.values, label='p99', linewidth=2, alpha=0.8)
+                
+                axes[idx].fill_between(p50.index, p50.values, p99.values, alpha=0.2)
+                axes[idx].set_title(f'{operation} Latency Percentiles (window={window_size})', 
+                                   fontsize=13, fontweight='bold')
+                axes[idx].set_xlabel('Timestamp', fontsize=11)
+                axes[idx].set_ylabel('Latency (seconds)', fontsize=11)
+                axes[idx].legend(loc='best')
+                axes[idx].grid(True, alpha=0.3)
+
+            plt.tight_layout()
+
+            if output_path:
+                plt.savefig(output_path)
+                print(f"Latency percentiles plot saved to {os.path.abspath(output_path)}")
+                plt.close()
+            else:
+                plt.show(block=True)
+                plt.close()
+        except Exception as e:
+            print(f"An error occurred while generating the latency percentiles plot: {e}")
 
     def allocation_size_distribution(self, df: pd.DataFrame, output_path: Optional[str] = None) -> None:
         """
@@ -247,10 +316,10 @@ class Visualizer:
                 return
 
             plt.figure(figsize=(10, 6))
-            sns.histplot(alloc_df['BlockSize'], bins=30, kde=False)
-            plt.title('Allocation Size Distribution')
-            plt.xlabel('Block Size (bytes)')
-            plt.ylabel('Number of Allocations')
+            plt.hist(alloc_df['BlockSize'], bins=30, edgecolor='black', alpha=0.7)
+            plt.title('Allocation Size Distribution', fontsize=14, fontweight='bold')
+            plt.xlabel('Block Size (bytes)', fontsize=12)
+            plt.ylabel('Number of Allocations', fontsize=12)
             plt.tight_layout()
 
             if output_path:
@@ -290,14 +359,11 @@ class Visualizer:
                 return
 
             plt.figure(figsize=(12, 6))
-            sns.barplot(
-                data=memory_by_source,
-                x='Source',
-                y='BlockSize'
-            )
-            plt.title('Total Memory Usage by Source')
-            plt.xlabel('Source')
-            plt.ylabel('Total Allocated Memory (bytes)')
+            plt.bar(memory_by_source['Source'], memory_by_source['BlockSize'], 
+                   edgecolor='black', alpha=0.7)
+            plt.title('Total Memory Usage by Source', fontsize=14, fontweight='bold')
+            plt.xlabel('Source', fontsize=12)
+            plt.ylabel('Total Allocated Memory (bytes)', fontsize=12)
             plt.xticks(rotation=45, ha='right')
             plt.tight_layout()
 
@@ -339,14 +405,11 @@ class Visualizer:
                 return
 
             plt.figure(figsize=(12, 6))
-            sns.barplot(
-                data=counts_by_source,
-                x='Source',
-                y='AllocationCount'
-            )
-            plt.title('Number of Allocations by Source')
-            plt.xlabel('Source')
-            plt.ylabel('Number of Allocations')
+            plt.bar(counts_by_source['Source'], counts_by_source['AllocationCount'],
+                   edgecolor='black', alpha=0.7)
+            plt.title('Number of Allocations by Source', fontsize=14, fontweight='bold')
+            plt.xlabel('Source', fontsize=12)
+            plt.ylabel('Number of Allocations', fontsize=12)
             plt.xticks(rotation=45, ha='right')
             plt.tight_layout()
 
@@ -387,14 +450,11 @@ class Visualizer:
                 return
 
             plt.figure(figsize=(12, 6))
-            sns.barplot(
-                data=latency_by_source,
-                x='Source',
-                y='Time'
-            )
-            plt.title('Average Allocation Latency by Source')
-            plt.xlabel('Source')
-            plt.ylabel('Average Latency (seconds)')
+            plt.bar(latency_by_source['Source'], latency_by_source['Time'],
+                   edgecolor='black', alpha=0.7)
+            plt.title('Average Allocation Latency by Source', fontsize=14, fontweight='bold')
+            plt.xlabel('Source', fontsize=12)
+            plt.ylabel('Average Latency (seconds)', fontsize=12)
             plt.xticks(rotation=45, ha='right')
             plt.tight_layout()
 
@@ -452,14 +512,11 @@ class Visualizer:
                 return
 
             plt.figure(figsize=(12, 8))
-            sns.heatmap(
-                heatmap_data,
-                cmap='YlGnBu',
-                cbar_kws={'label': 'Number of Allocations'}
-            )
-            plt.title('Allocation Size vs. Time Heatmap')
-            plt.xlabel('Time')
-            plt.ylabel('Allocation Size')
+            im = plt.imshow(heatmap_data, cmap='YlGnBu', aspect='auto', interpolation='nearest')
+            plt.colorbar(im, label='Number of Allocations')
+            plt.title('Allocation Size vs. Time Heatmap', fontsize=14, fontweight='bold')
+            plt.xlabel('Time', fontsize=12)
+            plt.ylabel('Allocation Size', fontsize=12)
             plt.tight_layout()
 
             if output_path:
@@ -500,14 +557,11 @@ class Visualizer:
                 return
 
             plt.figure(figsize=(12, 6))
-            sns.barplot(
-                data=callstack_counts,
-                x='CallStack',
-                y='AllocationCount'
-            )
-            plt.title('Allocation Frequency by Call Stack Trace')
-            plt.xlabel('Call Stack Trace')
-            plt.ylabel('Number of Allocations')
+            plt.bar(callstack_counts['CallStack'], callstack_counts['AllocationCount'],
+                   edgecolor='black', alpha=0.7)
+            plt.title('Allocation Frequency by Call Stack Trace', fontsize=14, fontweight='bold')
+            plt.xlabel('Call Stack Trace', fontsize=12)
+            plt.ylabel('Number of Allocations', fontsize=12)
             plt.xticks(rotation=45, ha='right')
             plt.tight_layout()
 
@@ -561,12 +615,14 @@ class Visualizer:
 
             # Plot Allocation Throughput Over Time
             plt.figure(figsize=(12, 6))
-            sns.lineplot(data=summary_df, x='Timestamp', y='AllocThroughput', marker='o', label='Allocation Throughput')
-            sns.lineplot(data=summary_df, x='Timestamp', y='DeallocThroughput', marker='o', label='Deallocation Throughput')
-            plt.title('Throughput Trends Over Time')
-            plt.xlabel('Benchmark Timestamp')
-            plt.ylabel('Throughput (operations per second)')
-            plt.legend()
+            plt.plot(summary_df['Timestamp'], summary_df['AllocThroughput'], 
+                    marker='o', label='Allocation Throughput', linewidth=2)
+            plt.plot(summary_df['Timestamp'], summary_df['DeallocThroughput'], 
+                    marker='s', label='Deallocation Throughput', linewidth=2)
+            plt.title('Throughput Trends Over Time', fontsize=14, fontweight='bold')
+            plt.xlabel('Benchmark Timestamp', fontsize=12)
+            plt.ylabel('Throughput (operations per second)', fontsize=12)
+            plt.legend(loc='best')
             plt.tight_layout()
 
             if output_path:

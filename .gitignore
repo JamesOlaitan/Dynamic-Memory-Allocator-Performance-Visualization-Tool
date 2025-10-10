@@ -1,45 +1,112 @@
-# Ignores virtual environments
-.venv/
-venv/
+# Build directories
+build/
+cmake-build-*/
+out/
 
-# Ignores Python cache files
+# Generated files
+compile_commands.json
+CMakeCache.txt
+CMakeFiles/
+*.cmake
+!CMakeLists.txt
+
+# Executables
+*.exe
+*.out
+*.app
+allocator_tests
+performance_tests
+stress_test
+unit_tests
+
+# Object files
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# Debug symbols
+*.dSYM/
+*.pdb
+
+# Reports and logs (except .gitkeep)
+reports/*.csv
+reports/*.json
+reports/plots/**/*.png
+!reports/.gitkeep
+
+# Data directories
+data/logs/*.csv
+data/logs/*.json
+!data/logs/.gitkeep
+
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+*.egg-info/
+dist/
+build/
 
-# Ignores IDE-specific files
+# IDEs
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
+.DS_Store
 
-# Ignores logs and temporary files
-*.log
+# Temporary files
 *.tmp
-*.err
-*.out
-
-# Ignores compiled C++ files and build artifacts
-*.o
-*.out
-*.exe
-*.app
-*.dSYM/
-build/
-
-# Ignores generated plots and temporary data
-plots/
-*.png
-*.jpg
-*.svg
-*.csv
-*.json
-
-data/logs/*.csv
-data/logs/*.json
-
-# Ignores VS Code temporary file
+*.temp
 tempCodeRunnerFile.py
+tempCodeRunnerFile.cpp
 
-# macOS metadata files
+# Coverage
+*.gcov
+*.gcda
+*.gcno
+coverage/
+htmlcov/
+
+# Benchmark results
+benchmark_results/
+*.json.bak
+
+# macOS
 .DS_Store
 .AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+.directory
+
+# Editor backups
+*~
+\#*\#
+.#*
+
+# Ninja
+.ninja_deps
+.ninja_log
+
+# Plots (generated)
+plots/*.png
+!plots/.gitkeep

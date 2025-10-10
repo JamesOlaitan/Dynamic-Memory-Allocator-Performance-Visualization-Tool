@@ -15,7 +15,8 @@
 #include <iomanip>
 #include <sstream>
 #include <thread>
-#include "cxxopts.hpp"
+#include <filesystem>
+#include "config_manager.h"
 #include "custom_allocator.h"
 #include "data_logger.h"
 
@@ -72,41 +73,53 @@ void throughputBenchmark(CustomAllocator& allocator, size_t blockSize, double du
 int main(int argc, char* argv[]) {
     std::cout << "Running performance_tests.cpp main function." << std::endl;
 
-    // Define and parse command-line options
-    cxxopts::Options options("performance_tests", "CustomAllocator Performance Benchmarking");
+    // Initialize ConfigManager
+    ConfigManager config("config/default.toml");
+    config.parseCLI(argc, argv, "performance_tests", "CustomAllocator Performance Benchmarking");
 
-    options.add_options()
-        ("benchmark", "Benchmark type [fixed|variable|throughput]", cxxopts::value<std::string>()->default_value("fixed"))
-        ("block-size", "Block size in bytes (for fixed and throughput benchmarks)", cxxopts::value<size_t>()->default_value("64"))
-        ("min-block-size", "Minimum block size in bytes (for variable benchmark)", cxxopts::value<size_t>()->default_value("32"))
-        ("max-block-size", "Maximum block size in bytes (for variable benchmark)", cxxopts::value<size_t>()->default_value("512"))
-        ("num-ops", "Number of operations (for fixed and variable benchmarks)", cxxopts::value<size_t>()->default_value("100000"))
-        ("duration", "Duration in seconds (for throughput benchmark)", cxxopts::value<double>()->default_value("10.0"))
-        ("output-file", "Path to output CSV file", cxxopts::value<std::string>()->default_value("performance_data.csv"))
-        ("help", "Print help");
-
-    auto result = options.parse(argc, argv);
-
-    if (result.count("help")) {
-        std::cout << options.help() << std::endl;
+    if (config.helpRequested()) {
+        std::cout << config.getHelpMessage() << std::endl;
         return 0;
     }
 
-    // Extract options
-    std::string benchmarkType = result["benchmark"].as<std::string>();
-    size_t blockSize = result["block-size"].as<size_t>();
-    size_t minBlockSize = result["min-block-size"].as<size_t>();
-    size_t maxBlockSize = result["max-block-size"].as<size_t>();
-    size_t numOperations = result["num-ops"].as<size_t>();
-    double duration = result["duration"].as<double>();
-    std::string outputFile = result["output-file"].as<std::string>();
+    try {
+        config.validate();
+    } catch (const std::exception& e) {
+        std::cerr << "Configuration error: " << e.what() << std::endl;
+        return 1;
+    }
+
+    // Extract configuration values
+    size_t minOrder = config.getSize("min-order", 6);
+    size_t maxOrder = config.getSize("max-order", 20);
+    size_t blockSize = config.getSize("block-size", 64);
+    size_t minBlockSize = config.getSize("min-block-size", 32);
+    size_t maxBlockSize = config.getSize("max-block-size", 512);
+    size_t numOperations = config.getSize("ops", 100000);
+    double duration = config.getDouble("duration", 10.0);
+    std::string benchmarkType = config.getString("benchmark", "fixed");
+
+    // Prepare output file with timestamp
+    std::string outputDir = config.getString("out", "reports");
+    std::filesystem::create_directories(outputDir);
+    
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm tm_buf;
+#if defined(_WIN32) || defined(_WIN64)
+    localtime_s(&tm_buf, &in_time_t);
+#else
+    localtime_r(&in_time_t, &tm_buf);
+#endif
+    std::ostringstream oss;
+    oss << outputDir << "/performance_tests_" 
+        << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
+    std::string outputFile = oss.str();
 
     // Initialize the DataLogger
     DataLogger logger(outputFile);
 
-    // Initialize the allocator with default or specified parameters
-    size_t minOrder = 5;  // Example values; adjust as needed
-    size_t maxOrder = 20;
+    // Initialize the allocator
     CustomAllocator allocator(minOrder, maxOrder);
 
     // Execute the selected benchmark

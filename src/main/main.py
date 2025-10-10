@@ -1,5 +1,6 @@
 import argparse
 import os
+from datetime import datetime
 from scripts.data_loader import DataLoader
 from scripts.visualizer import Visualizer
 from typing import List
@@ -25,8 +26,13 @@ def main():
     parser.add_argument(
         '-o', '--output',
         type=str,
-        default='plots', 
-        help='Output directory to save the plots. Defaults to "plots".'
+        default='reports/plots', 
+        help='Output directory to save the plots. Defaults to "reports/plots".'
+    )
+    parser.add_argument(
+        '--timestamp',
+        action='store_true',
+        help='Add timestamp subdirectory to output path.'
     )
     parser.add_argument(
         '-p', '--plots',
@@ -35,6 +41,7 @@ def main():
             'memory_usage_over_time',
             'allocation_deallocation_rates',
             'allocation_latency_over_time',
+            'allocation_latency_percentiles',
             'allocation_size_distribution',
             'memory_usage_by_source',
             'number_of_allocations_by_source',
@@ -50,28 +57,32 @@ def main():
 
     args = parser.parse_args()
 
-    # Define default CSV files
-    DEFAULT_CSV_FILES = [
-        'allocator_tests_data.csv',
-        'performance_data.csv'
-    ]
-
     # Determine which CSV files to use
     if args.input:
         csv_files = args.input
         print(f"User provided {len(csv_files)} CSV file(s) for processing.")
     else:
-        # Use default CSV files if available
-        existing_defaults = [f for f in DEFAULT_CSV_FILES if os.path.exists(f)]
-        if existing_defaults:
-            csv_files = existing_defaults
-            print(f"No input files provided. Using {len(csv_files)} default CSV file(s) for processing.")
+        # Look for CSV files in reports directory
+        reports_dir = "reports"
+        if os.path.exists(reports_dir):
+            csv_files = [os.path.join(reports_dir, f) for f in os.listdir(reports_dir) 
+                        if f.endswith('.csv')]
+            if csv_files:
+                print(f"No input files provided. Found {len(csv_files)} CSV file(s) in reports/ directory.")
+            else:
+                print("No input CSV files provided and no CSV files found in reports/ directory. Exiting.")
+                return
         else:
-            print("No input CSV files provided and no default CSV files found. Exiting.")
+            print("No input CSV files provided and reports/ directory not found. Exiting.")
             return
 
     # Validate and create output directory if needed
     output_dir = os.path.abspath(args.output)
+    
+    # Add timestamp subdirectory if requested
+    if args.timestamp:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        output_dir = os.path.join(output_dir, timestamp)
     try:
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir, exist_ok=True)
@@ -92,6 +103,7 @@ def main():
             'memory_usage_over_time',
             'allocation_deallocation_rates',
             'allocation_latency_over_time',
+            'allocation_latency_percentiles',
             'allocation_size_distribution',
             'memory_usage_by_source',
             'number_of_allocations_by_source',
@@ -114,6 +126,10 @@ def main():
         'allocation_latency_over_time': {
             'method': viz.allocation_latency_over_time,
             'filename': 'allocation_latency_over_time.png'
+        },
+        'allocation_latency_percentiles': {
+            'method': viz.allocation_latency_percentiles,
+            'filename': 'allocation_latency_percentiles.png'
         },
         'allocation_size_distribution': {
             'method': viz.allocation_size_distribution,

@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-22.04
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+  build-artifacts:
+    name: Build Release Artifacts (${{ matrix.os }})
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-22.04
+            artifact_name: buddy-allocator-linux-x64
+            archive_ext: tar.gz
+          - os: macos-latest
+            artifact_name: buddy-allocator-macos-x64
+            archive_ext: tar.gz
+          - os: windows-latest
+            artifact_name: buddy-allocator-windows-x64
+            archive_ext: zip
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Ninja (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja
+
+      - name: Configure CMake (Release)
+        run: |
+          cmake --preset release
+
+      - name: Build Release
+        run: |
+          cmake --build build/release --config Release
+
+      - name: Install to staging directory
+        run: |
+          cmake --install build/release --prefix staging
+
+      - name: Create archive (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd staging
+          tar -czf ../${{ matrix.artifact_name }}.tar.gz .
+
+      - name: Create archive (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cd staging
+          Compress-Archive -Path * -DestinationPath ../${{ matrix.artifact_name }}.zip
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ matrix.artifact_name }}.${{ matrix.archive_ext }}
+          asset_name: ${{ matrix.artifact_name }}.${{ matrix.archive_ext }}
+          asset_content_type: ${{ runner.os == 'Windows' && 'application/zip' || 'application/gzip' }}
+

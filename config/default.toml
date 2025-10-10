@@ -1,0 +1,21 @@
+# Default configuration for Buddy Allocator Performance Testing
+# Values can be overridden via command-line arguments
+
+[allocator]
+# Buddy allocator parameters
+min_order = 6          # Minimum block order (2^6 = 64 bytes)
+max_order = 20         # Maximum block order (2^20 = 1048576 bytes)
+alignment = 8          # Memory alignment in bytes
+
+[testing]
+# Test execution parameters
+num_operations = 1000  # Default number of allocation/deallocation operations
+duration_seconds = 10.0 # Default duration for time-based benchmarks
+random_seed = 42       # Random seed for reproducibility
+threads = 1            # Number of threads for multi-threaded tests
+
+[output]
+# Output configuration
+directory = "reports"  # Directory for CSV output files
+format = "csv"         # Output format (currently only csv supported)
+

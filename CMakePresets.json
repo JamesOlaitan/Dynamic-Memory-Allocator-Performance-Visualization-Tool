@@ -1,0 +1,137 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build with symbols, no optimization",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTS": "ON",
+        "BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Optimized release build",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTS": "ON",
+        "BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "AddressSanitizer",
+      "description": "Build with AddressSanitizer for memory error detection",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=address -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address"
+      }
+    },
+    {
+      "name": "ubsan",
+      "displayName": "UndefinedBehaviorSanitizer",
+      "description": "Build with UndefinedBehaviorSanitizer for UB detection",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=undefined -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined"
+      }
+    },
+    {
+      "name": "sanitizers",
+      "displayName": "All Sanitizers",
+      "description": "Build with both AddressSanitizer and UndefinedBehaviorSanitizer",
+      "inherits": "debug",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer -g",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "displayName": "Build Debug",
+      "description": "Build the debug configuration"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "displayName": "Build Release",
+      "description": "Build the release configuration"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "displayName": "Build ASan",
+      "description": "Build with AddressSanitizer"
+    },
+    {
+      "name": "ubsan",
+      "configurePreset": "ubsan",
+      "displayName": "Build UBSan",
+      "description": "Build with UndefinedBehaviorSanitizer"
+    },
+    {
+      "name": "sanitizers",
+      "configurePreset": "sanitizers",
+      "displayName": "Build All Sanitizers",
+      "description": "Build with all sanitizers enabled"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "displayName": "Test Debug",
+      "description": "Run tests in debug mode",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "displayName": "Test Release",
+      "description": "Run tests in release mode",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "sanitizers",
+      "configurePreset": "sanitizers",
+      "displayName": "Test with Sanitizers",
+      "description": "Run tests with sanitizers enabled",
+      "output": {
+        "outputOnFailure": true
+      },
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:symbolize=1",
+        "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"
+      }
+    }
+  ]
+}
+

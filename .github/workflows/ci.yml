@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.os }}, ${{ matrix.build_type }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-latest, windows-latest]
+        build_type: [Debug, Release]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Ninja (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja
+
+      - name: Configure CMake
+        run: |
+          cmake --preset ${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+
+      - name: Build
+        run: |
+          cmake --build build/${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }}
+
+      - name: Run Unit Tests
+        run: |
+          cd build/${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+          ctest --output-on-failure -C ${{ matrix.build_type }}
+
+      - name: Run Integration Tests (short)
+        if: runner.os != 'Windows'
+        run: |
+          ./build/${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}/allocator_tests --ops 100 --out reports
+          ./build/${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}/performance_tests --benchmark fixed --ops 100 --out reports
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.build_type }}
+          path: reports/*.csv
+          if-no-files-found: ignore
+
+  sanitizers:
+    name: Sanitizers (ASan + UBSan)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang-15
+
+      - name: Configure with Sanitizers
+        env:
+          CC: clang-15
+          CXX: clang++-15
+        run: |
+          cmake --preset sanitizers
+
+      - name: Build with Sanitizers
+        run: |
+          cmake --build build/sanitizers --config Debug
+
+      - name: Run Tests with Sanitizers
+        env:
+          ASAN_OPTIONS: "detect_leaks=1:symbolize=1:halt_on_error=1"
+          UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
+        run: |
+          cd build/sanitizers
+          ctest --output-on-failure -C Debug
+          cd ../..
+          ./build/sanitizers/allocator_tests --ops 50 --out reports
+
+  static-analysis:
+    name: Static Analysis (clang-tidy)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang-tidy-15
+
+      - name: Configure CMake
+        run: |
+          cmake --preset debug
+
+      - name: Run clang-tidy
+        run: |
+          find src -name '*.cpp' -not -path '*/build/*' | xargs clang-tidy-15 -p build/debug
+
+  format-check:
+    name: Format Check (clang-format)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format-15
+
+      - name: Check formatting
+        run: |
+          find src -name '*.cpp' -o -name '*.h' | xargs clang-format-15 --dry-run --Werror
+
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Configure CMake
+        run: |
+          cmake --preset release
+
+      - name: Build
+        run: |
+          cmake --build build/release --config Release
+
+      - name: Run Short Stress Test
+        run: |
+          ./build/release/stress_test --benchmark_min_time=1s --out reports
+
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: reports/*.csv
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate Plots
+        run: |
+          python3 src/main/main.py --timestamp
+
+      - name: Upload Plots
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-plots
+          path: reports/plots/**/*.png
+          if-no-files-found: ignore
+
