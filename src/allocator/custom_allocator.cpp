@@ -1,5 +1,6 @@
 // custom_allocator.cpp
 #include "custom_allocator.h"
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <sstream>

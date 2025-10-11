@@ -16,6 +16,7 @@
 #include <fstream>
 #include <memory>
 #include <cstdlib>
+#include <iomanip>
 #include "custom_allocator.h"
 #include "data_logger.h"
 #include "config_manager.h"
@@ -43,7 +44,7 @@ public:
      *
      * @param state Benchmark state.
      */
-    void SetUp(const ::benchmark::State& state) override {
+    void SetUp(const ::benchmark::State& /* state */) override {
         // Get configuration from global ConfigManager
         size_t min_order = g_config->getSize("min-order", 6);
         size_t max_order = g_config->getSize("max-order", 20);
@@ -77,7 +78,7 @@ public:
      *
      * @param state Benchmark state.
      */
-    void TearDown(const ::benchmark::State& state) override {
+    void TearDown(const ::benchmark::State& /* state */) override {
         if (allocator && dataLogger) {
             // Retrieve performance metrics from allocator
             double allocTime = allocator->getAllocationTime();       // Total allocation time in seconds

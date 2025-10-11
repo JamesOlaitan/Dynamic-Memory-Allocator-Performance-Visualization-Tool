@@ -132,11 +132,11 @@ void DataLogger::logSummary(const std::string& summary,
         auto now = std::chrono::system_clock::now();
         std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
         std::tm now_tm;
-    #if defined(_WIN32) || defined(_WIN64)
+#if defined(_WIN32) || defined(_WIN64)
         localtime_s(&now_tm, &now_time_t);
-    #else
+#else
         localtime_r(&now_time_t, &now_tm);
-    #endif
+#endif
         std::ostringstream timestampStream;
         timestampStream << std::put_time(&now_tm, "%Y-%m-%d %H:%M:%S");
         std::string timestamp = timestampStream.str();

@@ -142,7 +142,7 @@ void ConfigManager::parseCLI(int argc, char* argv[], const std::string& programN
             }
         }
 
-    } catch (const cxxopts::OptionException& e) {
+    } catch (const cxxopts::exceptions::parsing& e) {
         std::cerr << "Error parsing options: " << e.what() << "\n";
         showHelp = true;
         helpMessage = options.help();
