@@ -71,6 +71,7 @@ private:
     Block* splitBlock(Block* block, size_t targetOrder);
     Block* mergeBlock(Block* block);
     Block* getBuddy(Block* block);
+    bool isValidBlock(Block* block) const;
 
     // Instrumentation functions
     void recordAllocationTime(double time);
