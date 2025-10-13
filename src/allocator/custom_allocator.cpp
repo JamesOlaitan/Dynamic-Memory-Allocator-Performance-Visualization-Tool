@@ -18,18 +18,37 @@ CustomAllocator::CustomAllocator(size_t min_order, size_t max_order)
 
     // Initialize free lists
     freeLists.resize(maxOrder + 1);
-    std::memset(memoryPool, 0, totalSize);
+    
+    // Initialize the memory pool with proper placement new for std::string
+    // We need to be careful not to use memset on memory containing std::string objects
+    char* pool = static_cast<char*>(memoryPool);
+    for (size_t i = 0; i < totalSize; i += sizeof(Block)) {
+        if (i + sizeof(Block) <= totalSize) {
+            Block* block = reinterpret_cast<Block*>(pool + i);
+            // Use placement new to properly initialize the std::string
+            new (block) Block{0, false, nullptr, std::string()};
+        }
+    }
 
     // Add the entire memory pool to the largest free list
     Block* initialBlock = reinterpret_cast<Block*>(memoryPool);
     initialBlock->order = maxOrder;
     initialBlock->free = true;
-    initialBlock->next = nullptr;  // Initialize next pointer
+    initialBlock->next = nullptr;
     initialBlock->allocationID = "";
     freeLists[maxOrder].push_back(initialBlock);
 }
 
 CustomAllocator::~CustomAllocator() {
+    // Properly destroy all Block objects in the memory pool
+    char* pool = static_cast<char*>(memoryPool);
+    for (size_t i = 0; i < totalSize; i += sizeof(Block)) {
+        if (i + sizeof(Block) <= totalSize) {
+            Block* block = reinterpret_cast<Block*>(pool + i);
+            // Explicitly call destructor for std::string
+            block->allocationID.~basic_string();
+        }
+    }
     std::free(memoryPool);
 }
 
@@ -186,10 +205,8 @@ CustomAllocator::Block* CustomAllocator::splitBlock(CustomAllocator::Block* bloc
         size_t size = 1 << currentOrder;
         Block* buddy = reinterpret_cast<Block*>(reinterpret_cast<char*>(block) + size);
         
-        buddy->order = currentOrder;
-        buddy->free = true;
-        buddy->next = nullptr;  // Initialize next pointer
-        buddy->allocationID = "";
+        // Properly initialize the new buddy block
+        new (buddy) Block{currentOrder, true, nullptr, std::string()};
         freeLists[currentOrder].push_back(buddy);
         block->order = currentOrder;
     }
