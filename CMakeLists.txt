@@ -48,6 +48,31 @@ if(BUILD_BENCHMARKS)
         GIT_TAG v1.8.3
     )
     FetchContent_MakeAvailable(benchmark)
+
+    # Patch Google Benchmark cache type switch to handle CacheUnknown when fetched via
+    # older revisions that omit the case. This keeps the build warning-free while we
+    # wait for upstream to propagate.
+    set(_benchmark_sysinfo "${benchmark_SOURCE_DIR}/src/sysinfo.cc")
+    if(EXISTS "${_benchmark_sysinfo}")
+        file(READ "${_benchmark_sysinfo}" _benchmark_sysinfo_contents)
+        if(NOT _benchmark_sysinfo_contents MATCHES "CacheUnknown")
+            string(REPLACE
+"      case CacheTrace:
+        C.type = \"Trace\";
+        break;
+" 
+"      case CacheTrace:
+        C.type = \"Trace\";
+        break;
+      case CacheUnknown:
+        C.type = \"Unknown\";
+        break;
+" _benchmark_sysinfo_contents_patched "${_benchmark_sysinfo_contents}")
+            if(NOT _benchmark_sysinfo_contents STREQUAL _benchmark_sysinfo_contents_patched)
+                file(WRITE "${_benchmark_sysinfo}" "${_benchmark_sysinfo_contents_patched}")
+            endif()
+        endif()
+    endif()
 endif()
 
 # Compiler warnings
@@ -229,4 +254,3 @@ message(STATUS "  Build benchmarks   : ${BUILD_BENCHMARKS}")
 message(STATUS "  Enable sanitizers  : ${ENABLE_SANITIZERS}")
 message(STATUS "  Compiler           : ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "")
-

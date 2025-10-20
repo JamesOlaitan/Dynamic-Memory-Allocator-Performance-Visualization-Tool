@@ -1,22 +1,22 @@
 #ifndef CUSTOM_ALLOCATOR_H
 #define CUSTOM_ALLOCATOR_H
 
-#include <cstddef>
+#include <atomic>
 #include <chrono>
-#include <vector>
+#include <cstddef>
+#include <limits>
 #include <list>
 #include <mutex>
-#include <atomic>
-#include <string>
 #include <sstream>
-#include <limits>
+#include <string>
+#include <vector>
 
 /**
  * @class CustomAllocator
  * @brief A custom memory allocator implementing the buddy allocation algorithm.
  */
 class CustomAllocator {
-public:
+   public:
     CustomAllocator(size_t min_order, size_t max_order);
     ~CustomAllocator();
 
@@ -36,7 +36,7 @@ public:
     size_t getTotalAllocations() const;
     size_t getTotalDeallocations() const;
 
-private:
+   private:
     struct alignas(std::max_align_t) Block {
         size_t order;
         bool free;
@@ -84,4 +84,4 @@ private:
     size_t generateAllocationIndex();
 };
 
-#endif // CUSTOM_ALLOCATOR_H
+#endif  // CUSTOM_ALLOCATOR_H
