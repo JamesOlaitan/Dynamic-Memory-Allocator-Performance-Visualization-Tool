@@ -1,5 +1,6 @@
-#include "custom_allocator.h"
 #include <iostream>
+
+#include "custom_allocator.h"
 
 // Main function example usage
 int main() {

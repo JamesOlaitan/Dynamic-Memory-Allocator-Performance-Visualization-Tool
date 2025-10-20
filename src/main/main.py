@@ -1,9 +1,16 @@
 import argparse
 import os
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import List
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from scripts.data_loader import DataLoader
 from scripts.visualizer import Visualizer
-from typing import List
 
 def main():
     """
@@ -172,11 +179,11 @@ def main():
         # Load and preprocess data
         loader = DataLoader(csv_file)
         df = loader.load_data()
-        if df.empty:
+        if df is None or df.empty:
             print(f"No data loaded from '{csv_file}'. Skipping.")
             continue
         df = loader.preprocess_data(df)
-        if df.empty:
+        if df is None or df.empty:
             print(f"Data preprocessing resulted in an empty DataFrame for '{csv_file}'. Skipping.")
             continue
 

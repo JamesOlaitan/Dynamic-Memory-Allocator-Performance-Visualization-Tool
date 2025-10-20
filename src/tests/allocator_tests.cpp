@@ -1,12 +1,13 @@
-#include <iostream>
-#include <vector>
-#include <random>
 #include <chrono>
-#include <string>
-#include <iomanip>
-#include <sstream>
-#include <thread>
 #include <filesystem>
+#include <iomanip>
+#include <iostream>
+#include <random>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
+
 #include "config_manager.h"
 #include "custom_allocator.h"
 #include "data_logger.h"
@@ -28,7 +29,8 @@ void sequentialAllocationTest(CustomAllocator& allocator, size_t blockSize, size
  * @param numOperations Number of allocation/deallocation operations to perform.
  * @param logger Reference to the DataLogger instance.
  */
-void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_t maxBlockSize, size_t numOperations, DataLogger& logger);
+void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_t maxBlockSize, size_t numOperations,
+                          DataLogger& logger);
 
 /**
  * @brief Performs allocation and deallocation with mixed block sizes to simulate real-world usage.
@@ -37,7 +39,8 @@ void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_
  * @param numOperations Number of allocation/deallocation operations to perform.
  * @param logger Reference to the DataLogger instance.
  */
-void mixedSizesTest(CustomAllocator& allocator, const std::vector<size_t>& sizeDistribution, size_t numOperations, DataLogger& logger);
+void mixedSizesTest(CustomAllocator& allocator, const std::vector<size_t>& sizeDistribution, size_t numOperations,
+                    DataLogger& logger);
 
 /**
  * @brief Entry point for the allocator test.
@@ -76,7 +79,7 @@ int main(int argc, char* argv[]) {
     // Prepare output file with timestamp
     std::string outputDir = config.getString("out", "reports");
     std::filesystem::create_directories(outputDir);
-    
+
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
     std::tm tm_buf;
@@ -86,8 +89,7 @@ int main(int argc, char* argv[]) {
     localtime_r(&in_time_t, &tm_buf);
 #endif
     std::ostringstream oss;
-    oss << outputDir << "/allocator_tests_" 
-        << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
+    oss << outputDir << "/allocator_tests_" << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
     std::string outputFile = oss.str();
 
     // Initialize the DataLogger
@@ -154,12 +156,12 @@ void sequentialAllocationTest(CustomAllocator& allocator, size_t blockSize, size
         std::string memoryAddress = allocator.getMemoryAddress(ptr);
 
         // Source and CallStack (placeholders)
-        std::string source = __FUNCTION__; // Function name
+        std::string source = __FUNCTION__;  // Function name
         std::string callStack = "sequentialAllocationTest";
 
         // Log allocation time and fragmentation
-        logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(),
-                   source, callStack, memoryAddress, threadID, allocationID);
+        logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(), source, callStack,
+                   memoryAddress, threadID, allocationID);
     }
 
     // Deallocate in the same order
@@ -187,18 +189,19 @@ void sequentialAllocationTest(CustomAllocator& allocator, size_t blockSize, size
         std::string memoryAddress = allocator.getMemoryAddress(pointers[i]);
 
         // Source and CallStack (placeholders)
-        std::string source = __FUNCTION__; // Function name
+        std::string source = __FUNCTION__;  // Function name
         std::string callStack = "sequentialAllocationTest";
 
         // Log deallocation time and fragmentation
-        logger.log(timestamp, "Deallocation", blockSize, deallocTime, allocator.getFragmentation(),
-                   source, callStack, memoryAddress, threadID, allocationIDs[i]);
+        logger.log(timestamp, "Deallocation", blockSize, deallocTime, allocator.getFragmentation(), source, callStack,
+                   memoryAddress, threadID, allocationIDs[i]);
     }
 
     std::cout << "Sequential Allocation Test completed with " << numOperations << " operations." << std::endl;
 }
 
-void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_t maxBlockSize, size_t numOperations, DataLogger& logger) {
+void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_t maxBlockSize, size_t numOperations,
+                          DataLogger& logger) {
     std::vector<void*> pointers;
     std::vector<size_t> sizes;
     std::vector<std::string> allocationIDs;
@@ -209,7 +212,7 @@ void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<size_t> sizeDist(minBlockSize, maxBlockSize);
-    std::uniform_int_distribution<int> opDist(0, 1); // 0: allocate, 1: deallocate
+    std::uniform_int_distribution<int> opDist(0, 1);  // 0: allocate, 1: deallocate
 
     for (size_t i = 0; i < numOperations; ++i) {
         int operation = opDist(gen);
@@ -247,12 +250,12 @@ void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_
                 std::string memoryAddress = allocator.getMemoryAddress(ptr);
 
                 // Source and CallStack (placeholders)
-                std::string source = __FUNCTION__; // Function name
+                std::string source = __FUNCTION__;  // Function name
                 std::string callStack = "randomAllocationTest";
 
                 // Log allocation time and fragmentation
-                logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(),
-                           source, callStack, memoryAddress, threadID, allocationID);
+                logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(), source,
+                           callStack, memoryAddress, threadID, allocationID);
             } else {
                 std::cerr << "Allocation failed at iteration " << i << std::endl;
             }
@@ -283,12 +286,12 @@ void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_
             std::string memoryAddress = allocator.getMemoryAddress(pointers[index]);
 
             // Source and CallStack (placeholders)
-            std::string source = __FUNCTION__; // Function name
+            std::string source = __FUNCTION__;  // Function name
             std::string callStack = "randomAllocationTest";
 
             // Log deallocation time and fragmentation
-            logger.log(timestamp, "Deallocation", sizes[index], deallocTime, allocator.getFragmentation(),
-                       source, callStack, memoryAddress, threadID, allocationIDs[index]);
+            logger.log(timestamp, "Deallocation", sizes[index], deallocTime, allocator.getFragmentation(), source,
+                       callStack, memoryAddress, threadID, allocationIDs[index]);
 
             // Remove from vectors
             pointers.erase(pointers.begin() + index);
@@ -305,7 +308,8 @@ void randomAllocationTest(CustomAllocator& allocator, size_t minBlockSize, size_
     std::cout << "Random Allocation Test completed with " << numOperations << " operations." << std::endl;
 }
 
-void mixedSizesTest(CustomAllocator& allocator, const std::vector<size_t>& sizeDistribution, size_t numOperations, DataLogger& logger) {
+void mixedSizesTest(CustomAllocator& allocator, const std::vector<size_t>& sizeDistribution, size_t numOperations,
+                    DataLogger& logger) {
     std::vector<void*> pointers;
     std::vector<size_t> sizes;
     std::vector<std::string> allocationIDs;
@@ -316,7 +320,7 @@ void mixedSizesTest(CustomAllocator& allocator, const std::vector<size_t>& sizeD
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<size_t> sizeIndexDist(0, sizeDistribution.size() - 1);
-    std::uniform_int_distribution<int> opDist(0, 1); // 0: allocate, 1: deallocate
+    std::uniform_int_distribution<int> opDist(0, 1);  // 0: allocate, 1: deallocate
 
     for (size_t i = 0; i < numOperations; ++i) {
         int operation = opDist(gen);
@@ -355,12 +359,12 @@ void mixedSizesTest(CustomAllocator& allocator, const std::vector<size_t>& sizeD
                 std::string memoryAddress = allocator.getMemoryAddress(ptr);
 
                 // Source and CallStack (placeholders)
-                std::string source = __FUNCTION__; // Function name
+                std::string source = __FUNCTION__;  // Function name
                 std::string callStack = "mixedSizesTest";
 
                 // Log allocation time and fragmentation
-                logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(),
-                           source, callStack, memoryAddress, threadID, allocationID);
+                logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(), source,
+                           callStack, memoryAddress, threadID, allocationID);
             } else {
                 std::cerr << "Allocation failed at iteration " << i << std::endl;
             }
@@ -391,12 +395,12 @@ void mixedSizesTest(CustomAllocator& allocator, const std::vector<size_t>& sizeD
             std::string memoryAddress = allocator.getMemoryAddress(pointers[index]);
 
             // Source and CallStack (placeholders)
-            std::string source = __FUNCTION__; // Function name
+            std::string source = __FUNCTION__;  // Function name
             std::string callStack = "mixedSizesTest";
 
             // Log deallocation time and fragmentation
-            logger.log(timestamp, "Deallocation", sizes[index], deallocTime, allocator.getFragmentation(),
-                       source, callStack, memoryAddress, threadID, allocationIDs[index]);
+            logger.log(timestamp, "Deallocation", sizes[index], deallocTime, allocator.getFragmentation(), source,
+                       callStack, memoryAddress, threadID, allocationIDs[index]);
 
             // Remove from vectors
             pointers.erase(pointers.begin() + index);

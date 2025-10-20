@@ -1,5 +1,7 @@
-import pandas as pd
+import warnings
 from typing import Optional
+
+import pandas as pd
 
 
 class DataLoader:
@@ -67,8 +69,9 @@ class DataLoader:
         pd.DataFrame
             The preprocessed DataFrame.
         """
-        # Converts 'Timestamp' to datetime
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
+        # Converts 'Timestamp' to datetime using known formats and suppressing parser warnings
+        if 'Timestamp' in df.columns:
+            df['Timestamp'] = self._parse_timestamps(df['Timestamp'])
 
         # Converts 'Operation' to categorical
         df['Operation'] = df['Operation'].astype('category')
@@ -99,3 +102,28 @@ class DataLoader:
 
         print("Data preprocessing completed.")
         return df
+
+    @staticmethod
+    def _parse_timestamps(series: pd.Series) -> pd.Series:
+        """
+        Parse timestamp strings using known formats, falling back silently when necessary.
+        """
+        parsed = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
+        valid_mask = series.notna()
+        formats = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f")
+
+        for fmt in formats:
+            remaining = valid_mask & parsed.isna()
+            if not remaining.any():
+                break
+            converted = pd.to_datetime(series[remaining], format=fmt, errors="coerce")
+            parsed.loc[remaining] = converted
+
+        remaining = valid_mask & parsed.isna()
+        if remaining.any():
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=UserWarning)
+                fallback = pd.to_datetime(series[remaining], errors="coerce")
+            parsed.loc[remaining] = fallback
+
+        return parsed

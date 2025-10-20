@@ -9,21 +9,23 @@
  */
 
 #include <benchmark/benchmark.h>
+
+#include <atomic>
+#include <chrono>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
-#include <vector>
+#include <memory>
 #include <random>
 #include <string>
-#include <fstream>
-#include <memory>
-#include <cstdlib>
-#include <iomanip>
+#include <thread>
+#include <vector>
+
+#include "config_manager.h"
 #include "custom_allocator.h"
 #include "data_logger.h"
-#include "config_manager.h"
-#include <chrono>
-#include <thread>
-#include <atomic>
-#include <filesystem>
 
 // Global config manager (loaded from command line in main)
 static ConfigManager* g_config = nullptr;
@@ -36,10 +38,10 @@ static ConfigManager* g_config = nullptr;
  * and properly cleaned up afterward.
  */
 class AllocatorFixture : public benchmark::Fixture {
-public:
+   public:
     /**
      * @brief Set up the allocator and DataLogger before each benchmark.
-     * 
+     *
      * Initializes the CustomAllocator with parameters from ConfigManager.
      *
      * @param state Benchmark state.
@@ -55,7 +57,7 @@ public:
         // Initialize DataLogger with timestamped output file in reports directory
         std::string outputDir = g_config->getString("out", "reports");
         std::filesystem::create_directories(outputDir);
-        
+
         auto now = std::chrono::system_clock::now();
         auto in_time_t = std::chrono::system_clock::to_time_t(now);
         std::tm tm_buf;
@@ -65,15 +67,14 @@ public:
         localtime_r(&in_time_t, &tm_buf);
 #endif
         std::ostringstream oss;
-        oss << outputDir << "/stress_test_" 
-            << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
-        
+        oss << outputDir << "/stress_test_" << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
+
         dataLogger = new DataLogger(oss.str());
     }
 
     /**
      * @brief Tear down the allocator and DataLogger after each benchmark.
-     * 
+     *
      * Logs summary data and deletes the CustomAllocator and DataLogger instances.
      *
      * @param state Benchmark state.
@@ -81,9 +82,9 @@ public:
     void TearDown(const ::benchmark::State& /* state */) override {
         if (allocator && dataLogger) {
             // Retrieve performance metrics from allocator
-            double allocTime = allocator->getAllocationTime();       // Total allocation time in seconds
-            double deallocTime = allocator->getDeallocationTime();   // Total deallocation time in seconds
-            double fragmentation = allocator->getFragmentation();     // Fragmentation ratio (0.0 to 1.0)
+            double allocTime = allocator->getAllocationTime();      // Total allocation time in seconds
+            double deallocTime = allocator->getDeallocationTime();  // Total deallocation time in seconds
+            double fragmentation = allocator->getFragmentation();   // Fragmentation ratio (0.0 to 1.0)
 
             // Retrieve total allocations and deallocations from allocator
             size_t totalAllocs = allocator->getTotalAllocations();
@@ -95,7 +96,8 @@ public:
 
             // Log summary
             std::string summary = "Stress Test Summary";
-            dataLogger->logSummary(summary, allocThroughput, deallocThroughput, fragmentation * 100.0); // Convert to percentage
+            dataLogger->logSummary(summary, allocThroughput, deallocThroughput,
+                                   fragmentation * 100.0);  // Convert to percentage
 
             // Clean up
             delete allocator;
@@ -106,7 +108,7 @@ public:
         }
     }
 
-protected:
+   protected:
     CustomAllocator* allocator; /**< Pointer to the CustomAllocator instance */
     DataLogger* dataLogger;     /**< Pointer to the DataLogger instance */
 
@@ -174,9 +176,9 @@ BENCHMARK_DEFINE_F(AllocatorFixture, MemoryFragmentation)(benchmark::State& stat
     const size_t num_operations = state.range(0);
     std::vector<void*> pointers;
     pointers.reserve(num_operations);
-    std::mt19937 rng(42);  // Fixed seed for reproducibility
+    std::mt19937 rng(42);                                       // Fixed seed for reproducibility
     std::uniform_int_distribution<size_t> size_dist(64, 1024);  // Allocation sizes between 64 and 1024 bytes
-    std::uniform_int_distribution<int> op_dist(0, 1);  // 0 for allocate, 1 for deallocate
+    std::uniform_int_distribution<int> op_dist(0, 1);           // 0 for allocate, 1 for deallocate
 
     for (auto _ : state) {
         for (size_t i = 0; i < num_operations; ++i) {
@@ -258,7 +260,8 @@ BENCHMARK_DEFINE_F(AllocatorFixture, MaxLoadTest)(benchmark::State& state) {
 
         // Record the number of allocations
         state.PauseTiming();
-        state.counters["Max Allocations"] = benchmark::Counter(max_allocations, benchmark::Counter::kIsIterationInvariantRate);
+        state.counters["Max Allocations"] =
+            benchmark::Counter(max_allocations, benchmark::Counter::kIsIterationInvariantRate);
         state.ResumeTiming();
     }
 
@@ -266,27 +269,25 @@ BENCHMARK_DEFINE_F(AllocatorFixture, MaxLoadTest)(benchmark::State& state) {
 }
 
 // Register the benchmark without specific arguments, it runs until failure
-BENCHMARK_REGISTER_F(AllocatorFixture, MaxLoadTest)
-    ->Unit(benchmark::kMicrosecond)
-    ->Complexity();
+BENCHMARK_REGISTER_F(AllocatorFixture, MaxLoadTest)->Unit(benchmark::kMicrosecond)->Complexity();
 
 int main(int argc, char** argv) {
     // Initialize ConfigManager
     ConfigManager config("config/default.toml");
     config.parseCLI(argc, argv, "stress_test", "Stress testing for CustomAllocator using Google Benchmark");
-    
+
     if (config.helpRequested()) {
         std::cout << config.getHelpMessage() << std::endl;
         return 0;
     }
-    
+
     try {
         config.validate();
     } catch (const std::exception& e) {
         std::cerr << "Configuration error: " << e.what() << std::endl;
         return 1;
     }
-    
+
     // Store global config pointer for fixtures
     g_config = &config;
 

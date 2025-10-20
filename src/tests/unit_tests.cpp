@@ -1,10 +1,11 @@
-#include "gtest/gtest.h"
-#include "custom_allocator.h"
-#include <thread>
-#include <vector>
-#include <set>
 #include <algorithm>
 #include <cmath>
+#include <set>
+#include <thread>
+#include <vector>
+
+#include "custom_allocator.h"
+#include "gtest/gtest.h"
 
 // ============================================================================
 // Basic Allocation/Deallocation Tests
@@ -14,7 +15,7 @@ TEST(CustomAllocatorTest, BasicAllocationDeallocation) {
     CustomAllocator allocator(5, 20);
     void* ptr = allocator.allocate(64);
     EXPECT_NE(ptr, nullptr);
-    
+
     std::string allocID = allocator.getAllocationID(ptr);
     EXPECT_FALSE(allocID.empty());
     EXPECT_NE(allocID, "");
@@ -57,7 +58,7 @@ TEST(CustomAllocatorTest, NullptrDeallocation) {
 // ============================================================================
 
 TEST(CustomAllocatorTest, AllocateMaxSize) {
-    CustomAllocator allocator(6, 16); // max = 2^16 = 65536 bytes
+    CustomAllocator allocator(6, 16);  // max = 2^16 = 65536 bytes
     void* ptr = allocator.allocate(65536 - sizeof(CustomAllocator) - 100);
     EXPECT_NE(ptr, nullptr);
     allocator.deallocate(ptr);
@@ -69,17 +70,17 @@ TEST(CustomAllocatorTest, AllocateTooLarge) {
     // First, exhaust the pool
     std::vector<void*> ptrs;
     while (true) {
-        void* ptr = allocator.allocate(1 << 15); // Half of max size
+        void* ptr = allocator.allocate(1 << 15);  // Half of max size
         if (ptr == nullptr) {
             break;
         }
         ptrs.push_back(ptr);
     }
-    
+
     // Now pool is full, allocation should fail
     void* ptr = allocator.allocate(1 << 16);
     EXPECT_EQ(ptr, nullptr);
-    
+
     // Cleanup
     for (void* p : ptrs) {
         allocator.deallocate(p);
@@ -87,7 +88,7 @@ TEST(CustomAllocatorTest, AllocateTooLarge) {
 }
 
 TEST(CustomAllocatorTest, AllocateUntilFull) {
-    CustomAllocator allocator(6, 12); // Small pool for testing
+    CustomAllocator allocator(6, 12);  // Small pool for testing
     std::vector<void*> ptrs;
 
     // Keep allocating until we fail
@@ -95,7 +96,7 @@ TEST(CustomAllocatorTest, AllocateUntilFull) {
     while ((ptr = allocator.allocate(64)) != nullptr) {
         ptrs.push_back(ptr);
         if (ptrs.size() > 1000) {
-            break; // Safety limit
+            break;  // Safety limit
         }
     }
 
@@ -202,7 +203,7 @@ TEST(CustomAllocatorTest, FragmentationPattern) {
 // ============================================================================
 
 TEST(CustomAllocatorTest, SplitBlockInvariants) {
-    CustomAllocator allocator(6, 14); // Small pool
+    CustomAllocator allocator(6, 14);  // Small pool
 
     // Allocate a small block, which should cause splitting
     void* ptr1 = allocator.allocate(64);

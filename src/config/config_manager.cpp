@@ -74,6 +74,7 @@ void ConfigManager::loadTomlConfig() {
 void ConfigManager::parseCLI(int argc, char* argv[], const std::string& programName,
                              const std::string& description) {
     cxxopts::Options options(programName, description);
+    options.allow_unrecognised_options();
 
     options.add_options()("config", "Path to TOML config file", cxxopts::value<std::string>()->default_value("config/default.toml"))(
         "min-order", "Minimum buddy order (2^min-order bytes)", cxxopts::value<size_t>())(
