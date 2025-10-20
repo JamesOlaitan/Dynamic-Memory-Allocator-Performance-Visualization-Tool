@@ -86,7 +86,9 @@ void ConfigManager::parseCLI(int argc, char* argv[], const std::string& programN
         "duration", "Test duration in seconds", cxxopts::value<double>())(
         "seed", "Random seed for reproducibility", cxxopts::value<size_t>())(
         "out", "Output directory or file path", cxxopts::value<std::string>())(
-        "format", "Output format (csv or json)", cxxopts::value<std::string>())("h,help", "Print help");
+        "format", "Output format (csv or json)", cxxopts::value<std::string>())(
+        "benchmark", "Benchmark type [fixed|variable|throughput]", cxxopts::value<std::string>())(
+        "test", "Allocator test scenario [sequential|random|mixed]", cxxopts::value<std::string>())("h,help", "Print help");
 
     try {
         auto result = options.parse(argc, argv);
@@ -130,6 +132,12 @@ void ConfigManager::parseCLI(int argc, char* argv[], const std::string& programN
         }
         if (result.count("format")) {
             cliValues["format"] = result["format"].as<std::string>();
+        }
+        if (result.count("benchmark")) {
+            cliValues["benchmark"] = result["benchmark"].as<std::string>();
+        }
+        if (result.count("test")) {
+            cliValues["test"] = result["test"].as<std::string>();
         }
 
         // If a different config file was specified, reload it
@@ -213,4 +221,3 @@ void ConfigManager::validate() const {
 std::string ConfigManager::getHelpMessage() const {
     return helpMessage;
 }
-

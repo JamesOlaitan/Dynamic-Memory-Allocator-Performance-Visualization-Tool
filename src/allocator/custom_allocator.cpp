@@ -2,14 +2,13 @@
 #include "custom_allocator.h"
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 #include <sstream>
 #include <thread>
 
 CustomAllocator::CustomAllocator(size_t min_order, size_t max_order)
     : minOrder(min_order), maxOrder(max_order), allocationTime(0.0), deallocationTime(0.0),
       allocationCounter(0), totalAllocations(0), totalDeallocations(0) { // Initializes atomic counters
-    totalSize = 1 << maxOrder;
+    totalSize = static_cast<size_t>(1) << maxOrder;
     memoryPool = std::malloc(totalSize);
     if (!memoryPool) {
         throw std::bad_alloc();
@@ -18,37 +17,17 @@ CustomAllocator::CustomAllocator(size_t min_order, size_t max_order)
 
     // Initialize free lists
     freeLists.resize(maxOrder + 1);
-    
-    // Initialize the memory pool with proper placement new for std::string
-    // We need to be careful not to use memset on memory containing std::string objects
-    char* pool = static_cast<char*>(memoryPool);
-    for (size_t i = 0; i < totalSize; i += sizeof(Block)) {
-        if (i + sizeof(Block) <= totalSize) {
-            Block* block = reinterpret_cast<Block*>(pool + i);
-            // Use placement new to properly initialize the std::string
-            new (block) Block{0, false, nullptr, std::string()};
-        }
-    }
 
     // Add the entire memory pool to the largest free list
     Block* initialBlock = reinterpret_cast<Block*>(memoryPool);
     initialBlock->order = maxOrder;
     initialBlock->free = true;
     initialBlock->next = nullptr;
-    initialBlock->allocationID = "";
+    initialBlock->allocationIndex = INVALID_ALLOCATION_ID;
     freeLists[maxOrder].push_back(initialBlock);
 }
 
 CustomAllocator::~CustomAllocator() {
-    // Properly destroy all Block objects in the memory pool
-    char* pool = static_cast<char*>(memoryPool);
-    for (size_t i = 0; i < totalSize; i += sizeof(Block)) {
-        if (i + sizeof(Block) <= totalSize) {
-            Block* block = reinterpret_cast<Block*>(pool + i);
-            // Explicitly call destructor for std::string
-            block->allocationID.~basic_string();
-        }
-    }
     std::free(memoryPool);
 }
 
@@ -56,11 +35,8 @@ CustomAllocator::~CustomAllocator() {
  * @brief Generates a unique Allocation ID.
  * @return A unique allocation ID as a string.
  */
-std::string CustomAllocator::generateAllocationID() {
-    size_t id = allocationCounter.fetch_add(1, std::memory_order_relaxed);
-    std::ostringstream oss;
-    oss << "Alloc" << id;
-    return oss.str();
+size_t CustomAllocator::generateAllocationIndex() {
+    return allocationCounter.fetch_add(1, std::memory_order_relaxed);
 }
 
 std::string CustomAllocator::getAllocationID(void* ptr) {
@@ -83,8 +59,12 @@ std::string CustomAllocator::getAllocationID(void* ptr) {
         reinterpret_cast<char*>(block) >= poolEnd) {
         return "";  // Invalid block
     }
-    
-    return block->allocationID;
+
+    if (block->allocationIndex == INVALID_ALLOCATION_ID) {
+        return "";
+    }
+
+    return "Alloc" + std::to_string(block->allocationIndex);
 }
 
 std::string CustomAllocator::getMemoryAddress(void* ptr) {
@@ -128,7 +108,7 @@ void* CustomAllocator::allocate(size_t size) {
 
             block->free = false;
             block->next = nullptr;  // Initialize next pointer
-            block->allocationID = generateAllocationID();
+            block->allocationIndex = generateAllocationIndex();
             totalFreeMemory -= (1 << block->order);
 
             totalAllocations.fetch_add(1, std::memory_order_relaxed);
@@ -168,6 +148,7 @@ void CustomAllocator::deallocate(void* ptr) {
 
     block->free = true;
     block->next = nullptr;  // Initialize next pointer
+    block->allocationIndex = INVALID_ALLOCATION_ID;
     totalFreeMemory += (1 << block->order);
 
     totalDeallocations.fetch_add(1, std::memory_order_relaxed);
@@ -175,8 +156,8 @@ void CustomAllocator::deallocate(void* ptr) {
     // Merge with buddy blocks if possible
     Block* mergedBlock = mergeBlock(block);
     if (mergedBlock) {
-        mergedBlock->allocationID = ""; // Reset allocation ID after merging
         mergedBlock->next = nullptr;  // Initialize next pointer
+        mergedBlock->allocationIndex = INVALID_ALLOCATION_ID;
         freeLists[mergedBlock->order].push_back(mergedBlock);
     }
 
@@ -205,10 +186,14 @@ CustomAllocator::Block* CustomAllocator::splitBlock(CustomAllocator::Block* bloc
         size_t size = 1 << currentOrder;
         Block* buddy = reinterpret_cast<Block*>(reinterpret_cast<char*>(block) + size);
         
-        // Properly initialize the new buddy block
-        new (buddy) Block{currentOrder, true, nullptr, std::string()};
+        // Initialize the new buddy block metadata
+        buddy->order = currentOrder;
+        buddy->free = true;
+        buddy->next = nullptr;
+        buddy->allocationIndex = INVALID_ALLOCATION_ID;
         freeLists[currentOrder].push_back(buddy);
         block->order = currentOrder;
+        block->allocationIndex = INVALID_ALLOCATION_ID;
     }
     return block;
 }
@@ -231,6 +216,7 @@ CustomAllocator::Block* CustomAllocator::mergeBlock(CustomAllocator::Block* bloc
         if (it != buddyList.end() && buddy->free) {
             // Remove buddy from free list
             buddyList.erase(it);
+            buddy->allocationIndex = INVALID_ALLOCATION_ID;
             if (buddy > block) {
                 block->order++;
             } else {

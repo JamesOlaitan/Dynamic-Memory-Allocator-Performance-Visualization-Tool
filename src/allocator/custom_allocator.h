@@ -9,6 +9,7 @@
 #include <atomic>
 #include <string>
 #include <sstream>
+#include <limits>
 
 /**
  * @class CustomAllocator
@@ -36,12 +37,14 @@ public:
     size_t getTotalDeallocations() const;
 
 private:
-    struct Block {
+    struct alignas(std::max_align_t) Block {
         size_t order;
         bool free;
         Block* next;
-        std::string allocationID; // Unique ID for each allocation
+        size_t allocationIndex;
     };
+
+    static constexpr size_t INVALID_ALLOCATION_ID = std::numeric_limits<size_t>::max();
 
     size_t minOrder;
     size_t maxOrder;
@@ -77,8 +80,8 @@ private:
     void recordAllocationTime(double time);
     void recordDeallocationTime(double time);
 
-    // Generates a unique Allocation ID
-    std::string generateAllocationID();
+    // Generates a unique allocation index for ID formatting
+    size_t generateAllocationIndex();
 };
 
 #endif // CUSTOM_ALLOCATOR_H
