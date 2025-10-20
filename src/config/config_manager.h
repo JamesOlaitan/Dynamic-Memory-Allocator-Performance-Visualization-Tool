@@ -14,7 +14,7 @@
  * This class uses toml11 for parsing TOML files and cxxopts for CLI parsing.
  */
 class ConfigManager {
-public:
+   public:
     /**
      * @brief Constructs a ConfigManager and loads the specified config file.
      * @param configPath Path to the TOML configuration file.
@@ -80,12 +80,12 @@ public:
      */
     std::string getHelpMessage() const;
 
-private:
-    std::map<std::string, std::string> cliValues;      ///< Values from CLI arguments
-    std::map<std::string, std::string> configValues;   ///< Values from TOML file
-    std::string configPath;                             ///< Path to config file
-    bool showHelp;                                      ///< Whether --help was requested
-    std::string helpMessage;                            ///< Cached help message
+   private:
+    std::map<std::string, std::string> cliValues;     ///< Values from CLI arguments
+    std::map<std::string, std::string> configValues;  ///< Values from TOML file
+    std::string configPath;                           ///< Path to config file
+    bool showHelp;                                    ///< Whether --help was requested
+    std::string helpMessage;                          ///< Cached help message
 
     /**
      * @brief Loads values from TOML configuration file.
@@ -98,5 +98,4 @@ private:
     std::string getValue(const std::string& key, const std::string& defaultValue) const;
 };
 
-#endif // CONFIG_MANAGER_H
-
+#endif  // CONFIG_MANAGER_H

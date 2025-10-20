@@ -1,4 +1,5 @@
 #include "config_manager.h"
+
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -71,12 +72,12 @@ void ConfigManager::loadTomlConfig() {
     }
 }
 
-void ConfigManager::parseCLI(int argc, char* argv[], const std::string& programName,
-                             const std::string& description) {
+void ConfigManager::parseCLI(int argc, char* argv[], const std::string& programName, const std::string& description) {
     cxxopts::Options options(programName, description);
     options.allow_unrecognised_options();
 
-    options.add_options()("config", "Path to TOML config file", cxxopts::value<std::string>()->default_value("config/default.toml"))(
+    options.add_options()("config", "Path to TOML config file",
+                          cxxopts::value<std::string>()->default_value("config/default.toml"))(
         "min-order", "Minimum buddy order (2^min-order bytes)", cxxopts::value<size_t>())(
         "max-order", "Maximum buddy order (2^max-order bytes)", cxxopts::value<size_t>())(
         "min-block", "Minimum block size in bytes (alternative to min-order)", cxxopts::value<size_t>())(
@@ -84,12 +85,13 @@ void ConfigManager::parseCLI(int argc, char* argv[], const std::string& programN
         "alignment", "Memory alignment in bytes", cxxopts::value<size_t>())(
         "threads", "Number of threads for multi-threaded tests", cxxopts::value<size_t>())(
         "ops", "Number of operations", cxxopts::value<size_t>())(
-        "duration", "Test duration in seconds", cxxopts::value<double>())(
-        "seed", "Random seed for reproducibility", cxxopts::value<size_t>())(
-        "out", "Output directory or file path", cxxopts::value<std::string>())(
-        "format", "Output format (csv or json)", cxxopts::value<std::string>())(
+        "duration", "Test duration in seconds", cxxopts::value<double>())("seed", "Random seed for reproducibility",
+                                                                          cxxopts::value<size_t>())(
+        "out", "Output directory or file path", cxxopts::value<std::string>())("format", "Output format (csv or json)",
+                                                                               cxxopts::value<std::string>())(
         "benchmark", "Benchmark type [fixed|variable|throughput]", cxxopts::value<std::string>())(
-        "test", "Allocator test scenario [sequential|random|mixed]", cxxopts::value<std::string>())("h,help", "Print help");
+        "test", "Allocator test scenario [sequential|random|mixed]", cxxopts::value<std::string>())("h,help",
+                                                                                                    "Print help");
 
     try {
         auto result = options.parse(argc, argv);
