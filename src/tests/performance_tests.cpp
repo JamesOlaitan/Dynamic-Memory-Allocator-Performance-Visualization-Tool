@@ -7,15 +7,16 @@
  * and memory fragmentation. Results are logged using the DataLogger class.
  */
 
-#include <iostream>
-#include <vector>
-#include <random>
 #include <chrono>
-#include <string>
-#include <iomanip>
-#include <sstream>
-#include <thread>
 #include <filesystem>
+#include <iomanip>
+#include <iostream>
+#include <random>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
+
 #include "config_manager.h"
 #include "custom_allocator.h"
 #include "data_logger.h"
@@ -45,7 +46,8 @@ void fixedSizeBenchmark(CustomAllocator& allocator, size_t blockSize, size_t num
  * @param numOperations Number of allocation/deallocation operations to perform.
  * @param logger Reference to the DataLogger instance for logging performance metrics.
  */
-void variableSizeBenchmark(CustomAllocator& allocator, size_t minBlockSize, size_t maxBlockSize, size_t numOperations, DataLogger& logger);
+void variableSizeBenchmark(CustomAllocator& allocator, size_t minBlockSize, size_t maxBlockSize, size_t numOperations,
+                           DataLogger& logger);
 
 /**
  * @brief Measures the throughput of allocation and deallocation operations.
@@ -102,7 +104,7 @@ int main(int argc, char* argv[]) {
     // Prepare output file with timestamp
     std::string outputDir = config.getString("out", "reports");
     std::filesystem::create_directories(outputDir);
-    
+
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
     std::tm tm_buf;
@@ -112,8 +114,7 @@ int main(int argc, char* argv[]) {
     localtime_r(&in_time_t, &tm_buf);
 #endif
     std::ostringstream oss;
-    oss << outputDir << "/performance_tests_" 
-        << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
+    oss << outputDir << "/performance_tests_" << std::put_time(&tm_buf, "%Y-%m-%d_%H-%M-%S") << ".csv";
     std::string outputFile = oss.str();
 
     // Initialize the DataLogger
@@ -126,16 +127,13 @@ int main(int argc, char* argv[]) {
     if (benchmarkType == "fixed") {
         std::cout << "Starting Fixed-Size Allocation Benchmark..." << std::endl;
         fixedSizeBenchmark(allocator, blockSize, numOperations, logger);
-    }
-    else if (benchmarkType == "variable") {
+    } else if (benchmarkType == "variable") {
         std::cout << "Starting Variable-Size Allocation Benchmark..." << std::endl;
         variableSizeBenchmark(allocator, minBlockSize, maxBlockSize, numOperations, logger);
-    }
-    else if (benchmarkType == "throughput") {
+    } else if (benchmarkType == "throughput") {
         std::cout << "Starting Throughput Benchmark..." << std::endl;
         throughputBenchmark(allocator, blockSize, duration, logger);
-    }
-    else {
+    } else {
         std::cerr << "Invalid benchmark type specified. Use [fixed|variable|throughput]." << std::endl;
         return 1;
     }
@@ -156,7 +154,7 @@ void fixedSizeBenchmark(CustomAllocator& allocator, size_t blockSize, size_t num
         auto allocStart = std::chrono::high_resolution_clock::now();
         void* ptr = allocator.allocate(blockSize);
         auto allocEnd = std::chrono::high_resolution_clock::now();
-        double allocTime = std::chrono::duration<double, std::micro>(allocEnd - allocStart).count(); // in microseconds
+        double allocTime = std::chrono::duration<double, std::micro>(allocEnd - allocStart).count();  // in microseconds
 
         if (ptr == nullptr) {
             std::cerr << "Allocation failed at iteration " << i << std::endl;
@@ -186,12 +184,12 @@ void fixedSizeBenchmark(CustomAllocator& allocator, size_t blockSize, size_t num
         std::string memoryAddress = allocator.getMemoryAddress(ptr);
 
         // Source and CallStack (placeholders)
-        std::string source = __FUNCTION__; // Function name
+        std::string source = __FUNCTION__;  // Function name
         std::string callStack = "fixedSizeBenchmark";
 
         // Log allocation time and fragmentation
-        logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(),
-                   source, callStack, memoryAddress, threadID, allocationID);
+        logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(), source, callStack,
+                   memoryAddress, threadID, allocationID);
     }
 
     // Deallocate all pointers
@@ -200,7 +198,8 @@ void fixedSizeBenchmark(CustomAllocator& allocator, size_t blockSize, size_t num
         auto deallocStart = std::chrono::high_resolution_clock::now();
         allocator.deallocate(pointers[i]);
         auto deallocEnd = std::chrono::high_resolution_clock::now();
-        double deallocTime = std::chrono::duration<double, std::micro>(deallocEnd - deallocStart).count(); // in microseconds
+        double deallocTime =
+            std::chrono::duration<double, std::micro>(deallocEnd - deallocStart).count();  // in microseconds
 
         // Generate timestamp
         auto now = std::chrono::system_clock::now();
@@ -219,18 +218,19 @@ void fixedSizeBenchmark(CustomAllocator& allocator, size_t blockSize, size_t num
         std::string memoryAddress = allocator.getMemoryAddress(pointers[i]);
 
         // Source and CallStack (placeholders)
-        std::string source = __FUNCTION__; // Function name
+        std::string source = __FUNCTION__;  // Function name
         std::string callStack = "fixedSizeBenchmark";
 
         // Log deallocation time and fragmentation
-        logger.log(timestamp, "Deallocation", blockSize, deallocTime, allocator.getFragmentation(),
-                   source, callStack, memoryAddress, threadID, allocationIDs[i]);
+        logger.log(timestamp, "Deallocation", blockSize, deallocTime, allocator.getFragmentation(), source, callStack,
+                   memoryAddress, threadID, allocationIDs[i]);
     }
 
     std::cout << "Fixed-Size Allocation Benchmark completed with " << numOperations << " operations." << std::endl;
 }
 
-void variableSizeBenchmark(CustomAllocator& allocator, size_t minBlockSize, size_t maxBlockSize, size_t numOperations, DataLogger& logger) {
+void variableSizeBenchmark(CustomAllocator& allocator, size_t minBlockSize, size_t maxBlockSize, size_t numOperations,
+                           DataLogger& logger) {
     std::vector<void*> pointers;
     pointers.reserve(numOperations);
 
@@ -252,7 +252,7 @@ void variableSizeBenchmark(CustomAllocator& allocator, size_t minBlockSize, size
         auto allocStart = std::chrono::high_resolution_clock::now();
         void* ptr = allocator.allocate(blockSize);
         auto allocEnd = std::chrono::high_resolution_clock::now();
-        double allocTime = std::chrono::duration<double, std::micro>(allocEnd - allocStart).count(); // in microseconds
+        double allocTime = std::chrono::duration<double, std::micro>(allocEnd - allocStart).count();  // in microseconds
 
         if (ptr == nullptr) {
             std::cerr << "Allocation failed at iteration " << i << std::endl;
@@ -283,12 +283,12 @@ void variableSizeBenchmark(CustomAllocator& allocator, size_t minBlockSize, size
         std::string memoryAddress = allocator.getMemoryAddress(ptr);
 
         // Source and CallStack (placeholders)
-        std::string source = __FUNCTION__; // Function name
+        std::string source = __FUNCTION__;  // Function name
         std::string callStack = "variableSizeBenchmark";
 
         // Log allocation time and fragmentation
-        logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(),
-                   source, callStack, memoryAddress, threadID, allocationID);
+        logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(), source, callStack,
+                   memoryAddress, threadID, allocationID);
     }
 
     // Deallocate all pointers
@@ -297,7 +297,8 @@ void variableSizeBenchmark(CustomAllocator& allocator, size_t minBlockSize, size
         auto deallocStart = std::chrono::high_resolution_clock::now();
         allocator.deallocate(pointers[i]);
         auto deallocEnd = std::chrono::high_resolution_clock::now();
-        double deallocTime = std::chrono::duration<double, std::micro>(deallocEnd - deallocStart).count(); // in microseconds
+        double deallocTime =
+            std::chrono::duration<double, std::micro>(deallocEnd - deallocStart).count();  // in microseconds
 
         // Generate timestamp
         auto now = std::chrono::system_clock::now();
@@ -316,12 +317,12 @@ void variableSizeBenchmark(CustomAllocator& allocator, size_t minBlockSize, size
         std::string memoryAddress = allocator.getMemoryAddress(pointers[i]);
 
         // Source and CallStack (placeholders)
-        std::string source = __FUNCTION__; // Function name
+        std::string source = __FUNCTION__;  // Function name
         std::string callStack = "variableSizeBenchmark";
 
         // Log deallocation time and fragmentation
-        logger.log(timestamp, "Deallocation", sizes[i], deallocTime, allocator.getFragmentation(),
-                   source, callStack, memoryAddress, threadID, allocationIDs[i]);
+        logger.log(timestamp, "Deallocation", sizes[i], deallocTime, allocator.getFragmentation(), source, callStack,
+                   memoryAddress, threadID, allocationIDs[i]);
     }
 
     std::cout << "Variable-Size Allocation Benchmark completed with " << numOperations << " operations." << std::endl;
@@ -345,7 +346,7 @@ void throughputBenchmark(CustomAllocator& allocator, size_t blockSize, double du
         auto allocStart = std::chrono::high_resolution_clock::now();
         void* ptr = allocator.allocate(blockSize);
         auto allocEnd = std::chrono::high_resolution_clock::now();
-        double allocTime = std::chrono::duration<double, std::micro>(allocEnd - allocStart).count(); // in microseconds
+        double allocTime = std::chrono::duration<double, std::micro>(allocEnd - allocStart).count();  // in microseconds
 
         if (ptr != nullptr) {
             // Get allocation ID
@@ -372,12 +373,12 @@ void throughputBenchmark(CustomAllocator& allocator, size_t blockSize, double du
             std::string memoryAddress = allocator.getMemoryAddress(ptr);
 
             // Source and CallStack (placeholders)
-            std::string source = __FUNCTION__; // Function name
+            std::string source = __FUNCTION__;  // Function name
             std::string callStack = "throughputBenchmark";
 
             // Log allocation time and fragmentation
-            logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(),
-                       source, callStack, memoryAddress, threadID, allocationID);
+            logger.log(timestamp, "Allocation", blockSize, allocTime, allocator.getFragmentation(), source, callStack,
+                       memoryAddress, threadID, allocationID);
         }
 
         // Deallocate memory if any pointers are available
@@ -389,7 +390,8 @@ void throughputBenchmark(CustomAllocator& allocator, size_t blockSize, double du
             auto deallocStart = std::chrono::high_resolution_clock::now();
             allocator.deallocate(ptr);
             auto deallocEnd = std::chrono::high_resolution_clock::now();
-            double deallocTime = std::chrono::duration<double, std::micro>(deallocEnd - deallocStart).count(); // in microseconds
+            double deallocTime =
+                std::chrono::duration<double, std::micro>(deallocEnd - deallocStart).count();  // in microseconds
 
             pointers.erase(pointers.begin());
             allocationIDs.erase(allocationIDs.begin());
@@ -412,12 +414,12 @@ void throughputBenchmark(CustomAllocator& allocator, size_t blockSize, double du
             std::string memoryAddress = allocator.getMemoryAddress(ptr);
 
             // Source and CallStack (placeholders)
-            std::string source = __FUNCTION__; // Function name
+            std::string source = __FUNCTION__;  // Function name
             std::string callStack = "throughputBenchmark";
 
             // Log deallocation time and fragmentation
-            logger.log(timestamp, "Deallocation", blockSize, deallocTime, allocator.getFragmentation(),
-                       source, callStack, memoryAddress, threadID, allocationID);
+            logger.log(timestamp, "Deallocation", blockSize, deallocTime, allocator.getFragmentation(), source,
+                       callStack, memoryAddress, threadID, allocationID);
         }
     }
 
