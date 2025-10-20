@@ -14,7 +14,7 @@
  * operation and can log summary statistics for performance benchmarks.
  */
 class DataLogger {
-public:
+   public:
     /**
      * @brief Constructs a new DataLogger object and initializes the log file.
      *
@@ -44,16 +44,9 @@ public:
      * @param threadID The ID of the thread performing the operation.
      * @param allocationID The unique identifier for the allocation.
      */
-    void log(const std::string& timestamp,
-             const std::string& operation,
-             size_t blockSize,
-             double time,
-             double fragmentation,
-             const std::string& source,
-             const std::string& callStack,
-             const std::string& memoryAddress,
-             const std::string& threadID,
-             const std::string& allocationID);
+    void log(const std::string& timestamp, const std::string& operation, size_t blockSize, double time,
+             double fragmentation, const std::string& source, const std::string& callStack,
+             const std::string& memoryAddress, const std::string& threadID, const std::string& allocationID);
 
     /**
      * @brief Logs summary metrics for performance benchmarks.
@@ -67,14 +60,11 @@ public:
      * @param deallocThroughput Deallocation throughput in operations per second.
      * @param fragmentation Current memory fragmentation percentage.
      */
-    void logSummary(const std::string& summary,
-                   double allocThroughput,
-                   double deallocThroughput,
-                   double fragmentation);
+    void logSummary(const std::string& summary, double allocThroughput, double deallocThroughput, double fragmentation);
 
-private:
-    std::ofstream logFile; ///< The output file stream for logging data.
-    std::mutex logMutex;   ///< Mutex to ensure thread-safe logging.
+   private:
+    std::ofstream logFile;  ///< The output file stream for logging data.
+    std::mutex logMutex;    ///< Mutex to ensure thread-safe logging.
 };
 
-#endif // DATA_LOGGER_H
+#endif  // DATA_LOGGER_H

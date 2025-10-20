@@ -1,9 +1,11 @@
-#include <iostream>
-#include <unistd.h>     // For getcwd
-#include <limits.h>     // For PATH_MAX
-#include <sstream>      // For std::ostringstream
-#include <iomanip>      // For std::put_time
 #include "data_logger.h"
+
+#include <limits.h>  // For PATH_MAX
+#include <unistd.h>  // For getcwd
+
+#include <iomanip>  // For std::put_time
+#include <iostream>
+#include <sstream>  // For std::ostringstream
 
 /**
  * @brief Constructs a new DataLogger object and initializes the log file.
@@ -34,7 +36,8 @@ DataLogger::DataLogger(const std::string& filename) {
         logFile.seekp(0, std::ios::end);
         if (logFile.tellp() == 0) {
             std::cout << "File opened successfully: " << actualFilename << std::endl;
-            logFile << "Timestamp,Operation,BlockSize,Time,Fragmentation,Source,CallStack,MemoryAddress,ThreadID,AllocationID\n";
+            logFile << "Timestamp,Operation,BlockSize,Time,Fragmentation,Source,CallStack,MemoryAddress,ThreadID,"
+                       "AllocationID\n";
         } else {
             std::cout << "File opened successfully: " << actualFilename << std::endl;
         }
@@ -69,42 +72,19 @@ DataLogger::~DataLogger() {
  * @param threadID The ID of the thread performing the operation.
  * @param allocationID The unique identifier for the allocation.
  */
-void DataLogger::log(const std::string& timestamp,
-                     const std::string& operation,
-                     size_t blockSize,
-                     double time,
-                     double fragmentation,
-                     const std::string& source,
-                     const std::string& callStack,
-                     const std::string& memoryAddress,
-                     const std::string& threadID,
-                     const std::string& allocationID) {
+void DataLogger::log(const std::string& timestamp, const std::string& operation, size_t blockSize, double time,
+                     double fragmentation, const std::string& source, const std::string& callStack,
+                     const std::string& memoryAddress, const std::string& threadID, const std::string& allocationID) {
     std::lock_guard<std::mutex> lock(logMutex);
     if (logFile.is_open()) {
         // Log to console
-        std::cout << "Logging data: "
-                  << timestamp << ","
-                  << operation << ","
-                  << blockSize << ","
-                  << time << ","
-                  << fragmentation << ","
-                  << source << ","
-                  << callStack << ","
-                  << memoryAddress << ","
-                  << threadID << ","
-                  << allocationID << std::endl;
+        std::cout << "Logging data: " << timestamp << "," << operation << "," << blockSize << "," << time << ","
+                  << fragmentation << "," << source << "," << callStack << "," << memoryAddress << "," << threadID
+                  << "," << allocationID << std::endl;
 
         // Log to file
-        logFile << timestamp << ","
-                << operation << ","
-                << blockSize << ","
-                << time << ","
-                << fragmentation << ","
-                << source << ","
-                << callStack << ","
-                << memoryAddress << ","
-                << threadID << ","
-                << allocationID << "\n";
+        logFile << timestamp << "," << operation << "," << blockSize << "," << time << "," << fragmentation << ","
+                << source << "," << callStack << "," << memoryAddress << "," << threadID << "," << allocationID << "\n";
     } else {
         std::cerr << "File not open during logging." << std::endl;
     }
@@ -122,9 +102,7 @@ void DataLogger::log(const std::string& timestamp,
  * @param deallocThroughput Deallocation throughput in operations per second.
  * @param fragmentation Current memory fragmentation percentage.
  */
-void DataLogger::logSummary(const std::string& summary,
-                            double allocThroughput,
-                            double deallocThroughput,
+void DataLogger::logSummary(const std::string& summary, double allocThroughput, double deallocThroughput,
                             double fragmentation) {
     std::lock_guard<std::mutex> lock(logMutex);
     if (logFile.is_open()) {
@@ -142,30 +120,29 @@ void DataLogger::logSummary(const std::string& summary,
         std::string timestamp = timestampStream.str();
 
         // Log to console
-        std::cout << "Logging summary: "
-                  << timestamp << ","
-                  << "Summary" << ","
-                  << "0" << ","
-                  << allocThroughput << ","
-                  << deallocThroughput << ","
-                  << fragmentation << ","
-                  << summary << ","
-                  << ","      // MemoryAddress
-                  << ","      // ThreadID
-                  << ","      // AllocationID
+        std::cout << "Logging summary: " << timestamp << ","
+                  << "Summary"
+                  << ","
+                  << "0"
+                  << "," << allocThroughput << "," << deallocThroughput << "," << fragmentation << "," << summary << ","
+                  << ","  // MemoryAddress
+                  << ","  // ThreadID
+                  << ","  // AllocationID
                   << "\n";
 
         // Log to file
         logFile << timestamp << ","
-                << "Summary" << ","     // Operation
-                << "0" << ","           // BlockSize (0 indicates summary)
-                << allocThroughput << ","   // Time (alloc throughput)
-                << deallocThroughput << "," // Fragmentation (dealloc throughput)
-                << fragmentation << ","     // Source (fragmentation)
-                << summary << ","           // CallStack (summary description)
-                << ","                      // MemoryAddress
-                << ","                      // ThreadID
-                << ","                      // AllocationID
+                << "Summary"
+                << ","  // Operation
+                << "0"
+                << ","                       // BlockSize (0 indicates summary)
+                << allocThroughput << ","    // Time (alloc throughput)
+                << deallocThroughput << ","  // Fragmentation (dealloc throughput)
+                << fragmentation << ","      // Source (fragmentation)
+                << summary << ","            // CallStack (summary description)
+                << ","                       // MemoryAddress
+                << ","                       // ThreadID
+                << ","                       // AllocationID
                 << "\n";
     } else {
         std::cerr << "File not open during summary logging." << std::endl;
